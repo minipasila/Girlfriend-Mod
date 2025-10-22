@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "girlfriend-mod",
+	"version": "${version}",
+	"name": "Girlfriend Mod",
+	"description": "An interactive girlfriend entity companion with relationship mechanics, gift-giving, combat assistance, and romantic interactions.",
+	"authors": [
+		"Becky Tidus"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/girlfriend-mod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.beckytidus.girlfriendmod.GirlfriendMod"
+		],
+		"client": [
+			"com.beckytidus.girlfriendmod.GirlfriendModClient"
+		]
+	},
+	"mixins": [
+		"girlfriend-mod.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~1.21.9",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
