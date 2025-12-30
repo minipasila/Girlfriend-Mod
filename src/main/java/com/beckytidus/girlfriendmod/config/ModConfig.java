@@ -16,7 +16,10 @@ public class ModConfig {
 
     public String apiKey = "";
     public String modelName = "Qwen/Qwen2.5-VL-72B-Instruct-TEE";
+    public String customName = "Girlfriend";
     public int maxHistoryTokens = 8192;
+    public double minP = 0.05;
+    public double temperature = 0.85;
     public boolean enableAI = true;
 
     public static ModConfig get() {
