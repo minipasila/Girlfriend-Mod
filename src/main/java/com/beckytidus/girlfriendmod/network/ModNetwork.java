@@ -15,7 +15,17 @@ public class ModNetwork {
     public static final Identifier CONFIG_SYNC = Identifier.of("girlfriend-mod", "config_sync");
     public static final Identifier CLEAR_MEMORY = Identifier.of("girlfriend-mod", "clear_memory");
 
-    public record ConfigPayload(String apiKey, String model, String name, int tokens, double minP, double temperature) implements CustomPayload {
+    public record ConfigPayload(
+        String chutesApiKey, 
+        String chutesModel,
+        String openRouterApiKey,
+        String openRouterModel,
+        String name, 
+        int tokens, 
+        double minP, 
+        double temperature,
+        String aiProvider
+    ) implements CustomPayload {
         public static final Id<ConfigPayload> ID = new Id<>(CONFIG_SYNC);
         public static final PacketCodec<PacketByteBuf, ConfigPayload> CODEC = CustomPayload.codecOf(ModNetwork::writeConfig, ModNetwork::readConfig);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
@@ -28,22 +38,28 @@ public class ModNetwork {
     }
 
     private static void writeConfig(ConfigPayload p, PacketByteBuf buf) {
-        buf.writeString(p.apiKey);
-        buf.writeString(p.model);
+        buf.writeString(p.chutesApiKey);
+        buf.writeString(p.chutesModel);
+        buf.writeString(p.openRouterApiKey);
+        buf.writeString(p.openRouterModel);
         buf.writeString(p.name);
         buf.writeInt(p.tokens);
         buf.writeDouble(p.minP);
         buf.writeDouble(p.temperature);
+        buf.writeString(p.aiProvider);
     }
 
     private static ConfigPayload readConfig(PacketByteBuf buf) {
         return new ConfigPayload(
             buf.readString(), 
-            buf.readString(), 
-            buf.readString(), 
+            buf.readString(),
+            buf.readString(),
+            buf.readString(),
+            buf.readString(),
             buf.readInt(),
             buf.readDouble(),
-            buf.readDouble()
+            buf.readDouble(),
+            buf.readString()
         );
     }
 
@@ -54,12 +70,19 @@ public class ModNetwork {
         ServerPlayNetworking.registerGlobalReceiver(ConfigPayload.ID, (payload, context) -> {
             context.server().execute(() -> {
                 ModConfig config = ModConfig.get();
-                config.apiKey = payload.apiKey;
-                config.modelName = payload.model;
-                config.customName = payload.name;
-                config.maxHistoryTokens = payload.tokens;
-                config.minP = payload.minP;
-                config.temperature = payload.temperature;
+                config.chutesApiKey = payload.chutesApiKey();
+                config.chutesModelName = payload.chutesModel();
+                config.openRouterApiKey = payload.openRouterApiKey();
+                config.openRouterModelName = payload.openRouterModel();
+                config.customName = payload.name();
+                config.maxHistoryTokens = payload.tokens();
+                config.minP = payload.minP();
+                config.temperature = payload.temperature();
+                try {
+                    config.aiProvider = ModConfig.AIProvider.valueOf(payload.aiProvider());
+                } catch (IllegalArgumentException e) {
+                    config.aiProvider = ModConfig.AIProvider.CHUTES;
+                }
                 ModConfig.save();
                 
                 // Update names of existing entities for this player
@@ -90,12 +113,15 @@ public class ModNetwork {
 
     public static void sendConfigUpdatePacket(ModConfig config) {
         ClientPlayNetworking.send(new ConfigPayload(
-            config.apiKey, 
-            config.modelName, 
+            config.chutesApiKey, 
+            config.chutesModelName,
+            config.openRouterApiKey,
+            config.openRouterModelName,
             config.customName, 
             config.maxHistoryTokens, 
             config.minP,
-            config.temperature
+            config.temperature,
+            config.aiProvider.name()
         ));
     }
     

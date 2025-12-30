@@ -1,6 +1,7 @@
 package com.beckytidus.girlfriendmod.entity;
 
 import com.beckytidus.girlfriendmod.ai.ChutesClient;
+import com.beckytidus.girlfriendmod.ai.AIClientManager;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import net.minecraft.entity.EntityType;
@@ -169,7 +170,7 @@ public class GirlFriendEntity extends PathAwareEntity {
         
         getMemory().addMessage("user", msg);
         
-        ChutesClient.generateResponse(getMemory().getContextWindow(), 
+        AIClientManager.generateResponse(getMemory().getContextWindow(), 
             "Current action: " + gameContext + ". Relationship Lv: " + relationshipLevel)
             .thenAccept(response -> {
                 getMemory().addMessage("assistant", response);
@@ -254,7 +255,7 @@ public class GirlFriendEntity extends PathAwareEntity {
         if (this.getEntityWorld().isNight()) prompt += " It is night time.";
         if (this.getHealth() < 10) prompt += " You are hurt.";
         
-        ChutesClient.generateResponse(getMemory().getContextWindow(), 
+        AIClientManager.generateResponse(getMemory().getContextWindow(), 
             prompt + " Context: " + gameContext)
             .thenAccept(response -> {
                 getMemory().addMessage("assistant", response);

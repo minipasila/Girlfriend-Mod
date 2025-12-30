@@ -1,5 +1,6 @@
 package com.beckytidus.girlfriendmod.ai;
 
+import com.beckytidus.girlfriendmod.ai.AIClientManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -47,7 +48,7 @@ public class ConversationManager {
         int estimatedTokens = history.stream().mapToInt(m -> m.content.length()).sum() / 4;
         
         if (estimatedTokens > ModConfig.get().maxHistoryTokens) {
-            ChutesClient.summarize(history).thenAccept(newSummary -> {
+            AIClientManager.summarize(history).thenAccept(newSummary -> {
                 this.summary = newSummary;
                 // Keep last few messages
                 if (history.size() > 5) {

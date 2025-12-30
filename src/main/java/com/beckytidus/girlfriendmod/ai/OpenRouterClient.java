@@ -21,19 +21,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class ChutesClient {
-    private static final String API_URL = "https://llm.chutes.ai/v1/chat/completions";
+public class OpenRouterClient {
+    private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
     private static final HttpClient client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
+            .connectTimeout(Duration.ofSeconds(30))
             .build();
     private static final Gson gson = new Gson();
-    private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod");
-
+    private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-openrouter");
+    
     /**
      * Loads the system prompt from a config file.
      * Falls back to default prompt if file doesn't exist or is empty.
      */
-    private static String loadSystemPrompt(String name, String systemContext) {
+    public static String loadSystemPrompt(String name, String systemContext) {
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
 
@@ -45,20 +45,19 @@ public class ChutesClient {
                     customPrompt = customPrompt.replace("{name}", name);
                     // Replace {context} placeholder with system context
                     customPrompt = customPrompt.replace("{context}", systemContext);
-                    LOGGER.info("Loaded custom system prompt from file");
+                    LOGGER.info("Loaded custom system prompt from file for OpenRouter");
                     return customPrompt;
                 }
             } catch (IOException e) {
-                LOGGER.warn("Failed to read custom system prompt file, using default", e);
+                LOGGER.warn("Failed to read custom system prompt file for OpenRouter, using default", e);
             }
         }
 
-        // Default prompt if file doesn't exist or is empty
         return buildDefaultPrompt(name, systemContext);
     }
-
+    
     /**
-     * Builds the default system prompt (original hardcoded version).
+     * Builds the default system prompt (same as Chutes).
      */
     private static String buildDefaultPrompt(String name, String systemContext) {
         return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
@@ -79,33 +78,34 @@ public class ChutesClient {
                 "be a supportive, slightly clunky, and adorable companion. every response must be a single message.\n\n" +
                 "current environment data: " + systemContext;
     }
-
+    
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
         ModConfig config = ModConfig.get();
-        String apiKey = config.chutesApiKey;
+        String apiKey = config.getActiveApiKey();
+        
         if (apiKey == null || apiKey.isEmpty()) {
             return CompletableFuture.completedFuture("please set your api key in config... ^^");
         }
-
+        
         JsonObject body = new JsonObject();
-        body.addProperty("model", config.chutesModelName);
+        body.addProperty("model", config.getActiveModelName());
         body.addProperty("stream", false);
         body.addProperty("max_tokens", 1024);
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
-
+        
         JsonArray messages = new JsonArray();
-
-        // System Prompt - now loaded from file
+        
+        // System Prompt
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
-
+        
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
         String prompt = loadSystemPrompt(name, systemContext);
-
+        
         system.addProperty("content", prompt);
         messages.add(system);
-
+        
         // History
         for (ChatMessage msg : history) {
             JsonObject m = new JsonObject();
@@ -113,43 +113,48 @@ public class ChutesClient {
             m.addProperty("content", msg.content);
             messages.add(m);
         }
-
+        
         body.add("messages", messages);
-
+        
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
+                .header("HTTP-Referer", "https://github.com/minipasila/Girlfriend-Mod")
+                .header("X-Title", "Girlfriend Mod")
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
                 .build();
-
+        
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
+                        LOGGER.error("OpenRouter API error: {} - {}", response.statusCode(), response.body());
                         return "error: " + response.statusCode() + "... sorry >.<";
                     }
                     try {
                         JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-                        return json.getAsJsonArray("choices")
+                        String content = json.getAsJsonArray("choices")
                                 .get(0).getAsJsonObject()
                                 .get("message").getAsJsonObject()
                                 .get("content").getAsString();
+                        return content;
                     } catch (Exception e) {
+                        LOGGER.error("Error parsing OpenRouter response", e);
                         return "error parsing response... " + e.getMessage();
                     }
                 });
     }
-
+    
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
         return generateResponse(summaryPrompt, "You are a helpful assistant summarizer.");
     }
-
+    
     public static class ChatMessage {
         public String role;
         public String content;
-
+        
         public ChatMessage(String role, String content) {
             this.role = role;
             this.content = content;
