@@ -66,6 +66,19 @@ public class GirlFriendCommand {
                         })
                     )
                 )
+                // Add to registerGirlFriendCommand...
+                .then(CommandManager.literal("config")
+                    .executes(context -> {
+                        // Since config is client side GUI, we can't open it directly from server command.
+                        // But for single player integration or if installed on client,
+                        // we usually use a Keybinding or ModMenu.
+                        // For this specific requirement, we'll send a message telling user to use Keybind or ModMenu
+                        // OR if this is Client Side logic running, we open it.
+                        // Best approach for command-based GUI opening in Fabric:
+                        context.getSource().sendMessage(Text.literal("To configure AI, please install ModMenu or use the client-side keybind (if configured)."));
+                        return 1;
+                    })
+                )
         );
     }
 }
