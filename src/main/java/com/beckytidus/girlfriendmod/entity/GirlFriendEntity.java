@@ -13,10 +13,14 @@ import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
-import net.minecraft.world.World;
 import net.minecraft.util.Formatting;
+import net.minecraft.world.World;
+
+import java.util.UUID;
 
 public class GirlFriendEntity extends PathAwareEntity {
     private int relationshipLevel = 0;
@@ -25,7 +29,10 @@ public class GirlFriendEntity extends PathAwareEntity {
     private long lastGiftTime = 0;
     private long lastHealTime = 0;
     private String playerCustomName = "";
+    
     private PlayerEntity owner;
+    private UUID ownerUuid; 
+    
     private boolean isFollowing = true;
     
     // AI Components
@@ -34,9 +41,44 @@ public class GirlFriendEntity extends PathAwareEntity {
 
     public GirlFriendEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
-        this.setCustomName(Text.literal("GirlFriend"));
+        this.setCustomName(Text.literal("Girlfriend"));
     }
     
+    // --- Persistence Logic (NBT / Data Views) ---
+    // Updated for 1.21.6+: Uses WriteView instead of NbtCompound
+    @Override
+    public void writeCustomData(WriteView nbt) {
+        super.writeCustomData(nbt);
+        nbt.putInt("RelationshipLevel", this.relationshipLevel);
+        nbt.putString("CustomName", this.playerCustomName);
+        nbt.putBoolean("IsFollowing", this.isFollowing);
+        
+        // Manual UUID storage
+        if (this.ownerUuid != null) {
+            nbt.putLong("OwnerMost", this.ownerUuid.getMostSignificantBits());
+            nbt.putLong("OwnerLeast", this.ownerUuid.getLeastSignificantBits());
+        }
+    }
+
+    // Updated for 1.21.6+: Uses ReadView instead of NbtCompound
+    @Override
+    public void readCustomData(ReadView nbt) {
+        super.readCustomData(nbt);
+        
+        // Uses default values to handle Optional returns
+        this.relationshipLevel = nbt.getInt("RelationshipLevel", 0);
+        this.playerCustomName = nbt.getString("CustomName", "");
+        this.isFollowing = nbt.getBoolean("IsFollowing", true);
+        
+        // Manual UUID retrieval
+        long most = nbt.getLong("OwnerMost", 0L);
+        long least = nbt.getLong("OwnerLeast", 0L);
+        if (most != 0L && least != 0L) {
+            this.ownerUuid = new UUID(most, least);
+        }
+    }
+    // -------------------------------
+
     private ConversationManager getMemory() {
         if (conversationManager == null) {
             conversationManager = new ConversationManager(this.getUuid());
@@ -132,7 +174,7 @@ public class GirlFriendEntity extends PathAwareEntity {
             .thenAccept(response -> {
                 getMemory().addMessage("assistant", response);
                 if (this.owner != null) {
-                    this.owner.sendMessage(Text.literal("<GirlFriend> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                    this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
                 }
             });
     }
@@ -140,6 +182,12 @@ public class GirlFriendEntity extends PathAwareEntity {
     @Override
     public void tick() {
         super.tick();
+
+        // Restore owner reference from UUID if needed (fixes issue after restart)
+        // Fixed: Use isClient() method instead of field
+        if (this.owner == null && this.ownerUuid != null && !this.getEntityWorld().isClient()) {
+            this.owner = this.getEntityWorld().getPlayerByUuid(this.ownerUuid);
+        }
 
         if (this.owner != null) {
             long currentTime = System.currentTimeMillis();
@@ -166,7 +214,7 @@ public class GirlFriendEntity extends PathAwareEntity {
     }
     
     private void updateNameTag() {
-        String displayName = "GirlFriend";
+        String displayName = "Girlfriend";
         if (!this.playerCustomName.isEmpty()) displayName = this.playerCustomName;
         displayName += " [Lv:" + this.relationshipLevel + "]";
         this.setCustomName(Text.literal(displayName));
@@ -193,7 +241,11 @@ public class GirlFriendEntity extends PathAwareEntity {
     }
     
     public PlayerEntity getOwner() { return this.owner; }
-    public void setOwner(PlayerEntity player) { this.owner = player; }
+    
+    public void setOwner(PlayerEntity player) { 
+        this.owner = player;
+        this.ownerUuid = player.getUuid(); // Save UUID for persistence
+    }
 
     private void sayAIComment() {
         if (!ModConfig.get().enableAI || this.owner == null) return;
@@ -206,7 +258,7 @@ public class GirlFriendEntity extends PathAwareEntity {
             prompt + " Context: " + gameContext)
             .thenAccept(response -> {
                 getMemory().addMessage("assistant", response);
-                this.owner.sendMessage(Text.literal("<GirlFriend> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
             });
     }
 
@@ -246,7 +298,7 @@ public class GirlFriendEntity extends PathAwareEntity {
         if (this.owner != null) {
             String status = this.isFollowing ? "following you" : "waiting here";
             getMemory().addMessage("system", "You are now " + status);
-            this.owner.sendMessage(Text.literal("♥ GirlFriend: I'm " + status), false);
+            this.owner.sendMessage(Text.literal("♥ " + this.getName().getString() + ": I'm " + status), false);
         }
     }
 
