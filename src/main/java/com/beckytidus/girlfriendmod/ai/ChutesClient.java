@@ -5,11 +5,17 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,30 +27,41 @@ public class ChutesClient {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
     private static final Gson gson = new Gson();
+    private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod");
 
-    public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
-        ModConfig config = ModConfig.get();
-        String apiKey = config.apiKey;
-        if (apiKey == null || apiKey.isEmpty()) {
-            return CompletableFuture.completedFuture("please set your api key in config... ^^");
+    /**
+     * Loads the system prompt from a config file.
+     * Falls back to default prompt if file doesn't exist or is empty.
+     */
+    private static String loadSystemPrompt(String name, String systemContext) {
+        File promptFile = FabricLoader.getInstance().getConfigDir()
+                .resolve("girlfriend-mod/system-prompt.txt").toFile();
+
+        if (promptFile.exists()) {
+            try {
+                String customPrompt = Files.readString(promptFile.toPath());
+                if (customPrompt != null && !customPrompt.trim().isEmpty()) {
+                    // Replace {name} placeholder with actual name
+                    customPrompt = customPrompt.replace("{name}", name);
+                    // Replace {context} placeholder with system context
+                    customPrompt = customPrompt.replace("{context}", systemContext);
+                    LOGGER.info("Loaded custom system prompt from file");
+                    return customPrompt;
+                }
+            } catch (IOException e) {
+                LOGGER.warn("Failed to read custom system prompt file, using default", e);
+            }
         }
 
-        JsonObject body = new JsonObject();
-        body.addProperty("model", config.modelName);
-        body.addProperty("stream", false);
-        body.addProperty("max_tokens", 1024);
-        body.addProperty("temperature", config.temperature);
-        body.addProperty("min_p", config.minP);
+        // Default prompt if file doesn't exist or is empty
+        return buildDefaultPrompt(name, systemContext);
+    }
 
-        JsonArray messages = new JsonArray();
-        
-        // System Prompt
-        JsonObject system = new JsonObject();
-        system.addProperty("role", "system");
-        
-        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        
-        String prompt = "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
+    /**
+     * Builds the default system prompt (original hardcoded version).
+     */
+    private static String buildDefaultPrompt(String name, String systemContext) {
+        return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
                 "## CORE LINGUISTIC CONSTRAINTS\n" +
                 "1. STRICT LOWERCASE: you are incapable of using capital letters. always write in all-lowercase.\n" +
                 "2. PUNCUTATION & PAUSES: use '...' frequently to convey a hesitant or soft tone.\n" +
@@ -61,6 +78,30 @@ public class ChutesClient {
                 "- NO long-winded explanations.\n\n" +
                 "be a supportive, slightly clunky, and adorable companion. every response must be a single message.\n\n" +
                 "current environment data: " + systemContext;
+    }
+
+    public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
+        ModConfig config = ModConfig.get();
+        String apiKey = config.apiKey;
+        if (apiKey == null || apiKey.isEmpty()) {
+            return CompletableFuture.completedFuture("please set your api key in config... ^^");
+        }
+
+        JsonObject body = new JsonObject();
+        body.addProperty("model", config.modelName);
+        body.addProperty("stream", false);
+        body.addProperty("max_tokens", 1024);
+        body.addProperty("temperature", config.temperature);
+        body.addProperty("min_p", config.minP);
+
+        JsonArray messages = new JsonArray();
+
+        // System Prompt - now loaded from file
+        JsonObject system = new JsonObject();
+        system.addProperty("role", "system");
+
+        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
+        String prompt = loadSystemPrompt(name, systemContext);
 
         system.addProperty("content", prompt);
         messages.add(system);

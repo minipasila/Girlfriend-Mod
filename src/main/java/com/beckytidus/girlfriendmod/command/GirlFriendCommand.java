@@ -79,6 +79,15 @@ public class GirlFriendCommand {
                         return 1;
                     })
                 )
+                // Add this inside registerGirlFriendCommand() after the "config" literal:
+                .then(CommandManager.literal("reloadprompt")
+                    .executes(context -> {
+                        // Clear cached prompt if you're caching it
+                        // The next AI call will reload from file automatically
+                        context.getSource().sendMessage(Text.literal("♥ System prompt will be reloaded on next AI response!"));
+                        return 1;
+                    })
+                )
         );
     }
 }
