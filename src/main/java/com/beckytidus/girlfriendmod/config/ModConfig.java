@@ -46,6 +46,7 @@ public class ModConfig {
     public double minP = 0.05;
     public double temperature = 0.85;
     public boolean enableAI = true;
+    public String customTexturePath = "girlfriend-mod:textures/entity/girlfriend.png";
     
     public static ModConfig get() {
         if (INSTANCE == null) {

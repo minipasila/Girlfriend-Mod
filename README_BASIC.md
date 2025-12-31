@@ -18,6 +18,11 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - **Customizable Personality** - Edit system prompt for different behavior
 - **Configurable Settings** - Temperature, model, and more via GUI
 
+### Custom Skins (New)
+- **Resource Pack Support** - Create custom skins using standard Minecraft resource packs
+- **GUI Configuration** - Set texture path directly in the AI Config screen
+- **Flexible Format** - Supports any texture path format (namespace:path)
+
 ### Commands
 - `/girlfriend summon <player>` - Summon a girlfriend
 - `/girlfriend relationship <player> <0-100>` - Set relationship level
@@ -46,7 +51,33 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 2. **Right-click** with the item to summon a girlfriend
 3. **Right-click** to feed her food items and increase relationship
 4. **Sneak + Right-click** to toggle between follow and wait modes
-5. **Press G** to configure AI settings (including provider selection)
+5. **Press G** to configure AI settings (including provider selection and skin)
+
+## Custom Skins
+
+### Creating a Custom Skin Resource Pack
+
+1. Create a folder for your resource pack
+2. Add `pack.mcmeta`:
+   ```json
+   {
+       "pack": {
+           "description": "Custom GF Skin",
+           "min_format": 69,
+           "max_format": 69
+       }
+   }
+   ```
+3. Add your skin texture at: `assets/girlfriend-mod/textures/entity/girlfriend.png`
+4. Add the pack to Minecraft via the Resource Pack menu
+5. Open AI Config (press G) and set "Skin Texture Path" to: `girlfriend-mod:textures/entity/girlfriend.png`
+
+### Alternative Skin Paths
+
+You can use various texture path formats:
+- `girlfriend-mod:textures/entity/girlfriend.png` (default)
+- `minecraft:textures/entity/steve.png` (Steve's skin)
+- `your-mod:textures/entity/custom.png` (custom namespace)
 
 ## AI Setup
 
@@ -72,6 +103,7 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - **Support**: Multiple girlfriends per player
 - **Compatibility**: Minecraft 1.21.9, Fabric API, Java 21+
 - **AI Providers**: Chutes AI (default), OpenRouter (alternative)
+- **Skin Support**: Resource pack based with GUI configuration
 
 ## License
 

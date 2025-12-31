@@ -90,23 +90,30 @@ Added support for multiple AI providers:
   - OpenRouter API integration as alternative provider
   - Provider selection via GUI and config file
   - Separate API keys and model names for each provider
-  
+
 - ✅ **Conversation Memory**
   - ConversationManager with persistent storage
   - Automatic conversation summarization for long histories
   - Memory persistence across sessions
-  
+
 - ✅ **Configuration**
   - Client-side AI configuration GUI
   - Real-time config sync between client and server
   - Memory clear functionality
   - Provider selection (Chutes AI / OpenRouter)
   - Configurable temperature, minP, max history tokens
-  
+
 - ✅ **System Prompt**
   - File-based customization
   - Supports {name} and {context} placeholders
   - Easy editing via GUI button
+
+### Custom Skins (New)
+- ✅ **Resource Pack Support**
+  - Custom skins via resource packs
+  - Simple setup with girlfriend.png texture
+  - Supports standard Minecraft resource pack format
+  - Texture path configurable via GUI
 
 ---
 
@@ -137,16 +144,18 @@ Get API key: https://openrouter.ai
 ## Recent Changes (v1.0.X)
 
 ### New Features
+- **Custom Skin Support**: Added resource pack-based custom skin support with configurable texture path
 - **OpenRouter Support**: Added alternative AI provider with support for multiple models including Claude, GPT, and others
 - **AI Provider Selection**: Users can now choose between Chutes AI and OpenRouter in the config GUI
 - **Enhanced Config GUI**: Added provider toggle button and separate fields for each provider's settings
 - **Unified AIClientManager**: New class that routes AI requests to the selected provider
 
 ### Code Changes
+- Added `GirlFriendEntityRenderer.java` - Custom texture rendering with GUI configuration
 - Added `OpenRouterClient.java` - Full OpenRouter API integration
 - Added `AIClientManager.java` - Provider-agnostic AI client routing
 - Updated `ModConfig.java` - Added AIProvider enum and provider-specific settings
-- Updated `AIConfigScreen.java` - Added provider selection UI
+- Updated `AIConfigScreen.java` - Added provider selection UI and texture path field
 - Updated `ModNetwork.java` - Added provider info to config sync packets
 
 ### Bug Fixes

@@ -25,6 +25,7 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **🎨 Customizable System Prompts** - Edit personality via config file
 - **🔧 Client-Side GUI** - Easy configuration without editing JSON files
 - **📝 Memory Management** - Clear and manage conversation history
+- **🎭 Custom Skins** - Resource pack support for custom girlfriend textures
 
 ### ❤️ Original Features (CC0 Licensed - UltimateGamerMC)
 
@@ -43,12 +44,14 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Growing Relationship** - Build a real bond through care and conversation
 - **Heartfelt Messages** - Receive genuine affection with romantic phrases
 - **She Remembers You** - AI memory persists across sessions
+- **Your Way** - Custom skins to make her uniquely yours
 
 ### Living, Breathing Connection
 - **Feed & Care** - Share meals to strengthen your bond
 - **Protective Love** - She defends you from hostile mobs
 - **Surprise Gifts** - Receive diamonds, emeralds, and rare treasures
 - **Custom Identity** - Name her whatever you want
+- **Custom Appearance** - Use resource packs for custom skins
 
 ### AI-Powered Conversations
 - **Dynamic Responses** - Context-aware dialogue using Chutes AI or OpenRouter
@@ -100,7 +103,8 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
   "temperature": 0.85,
   "minP": 0.05,
   "maxHistoryTokens": 8192,
-  "enableAI": true
+  "enableAI": true,
+  "customTexturePath": "girlfriend-mod:textures/entity/girlfriend.png"
 }
 ```
 
@@ -124,6 +128,49 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 | `/girlfriend relationship <player> <0-100>` | Set relationship level |
 | `/girlfriend list <player>` | Count girlfriends |
 | `/girlfriend reloadprompt` | Reload system prompt |
+
+## 🎭 Custom Skins
+
+You can customize your girlfriend's appearance using resource packs! There are two methods:
+
+### Method 1: Resource Pack (Recommended)
+
+Create a resource pack with the following structure:
+
+```
+📁 my-skin-resource-pack/
+├── 📄 pack.mcmeta
+├── 📄 pack.png (optional)
+└── 📁 assets/
+    └── 📁 girlfriend-mod/
+        └── 📁 textures/
+            └── 📁 entity/
+                └── 📄 girlfriend.png
+```
+
+**pack.mcmeta:**
+```json
+{
+    "pack": {
+        "description": "Custom GF Skin",
+        "min_format": 69,
+        "max_format": 69
+    }
+}
+```
+
+Then:
+1. Add the resource pack to your Minecraft client
+2. Open AI Config (press `G`)
+3. Set "Skin Texture Path" to: `girlfriend-mod:textures/entity/girlfriend.png`
+4. Save and restart if needed
+
+### Method 2: Direct Path (Advanced)
+
+You can also use external texture paths:
+- `girlfriend-mod:textures/entity/girlfriend.png` (default)
+- `minecraft:textures/entity/steve.png` (use Steve's skin)
+- `custom-mod:textures/entity/my_skin.png` (custom namespace)
 
 ## 📁 File Structure
 
@@ -161,13 +208,15 @@ girlfriend-mod/
 │   └── client/
 │       ├── KeyInputHandler.java
 │       └── render/
-│           └── GirlFriendEntityRenderer.java
+│           └── GirlFriendEntityRenderer.java  # Custom skin rendering
 └── src/main/resources/
     ├── fabric.mod.json
     ├── girlfriend-mod.mixins.json
     ├── assets/girlfriend-mod/
     │   ├── lang/en_us.json
     │   ├── textures/
+    │   │   └── entity/
+    │   │       └── girlfriend.png   # Default skin
     │   └── system-prompt.txt        # AI personality
     └── data/girlfriend-mod/recipes/
         └── girlfriend_summoner.json

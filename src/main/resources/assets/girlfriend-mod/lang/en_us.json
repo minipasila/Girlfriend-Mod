@@ -8,5 +8,6 @@
   "chat.girlfriend-mod.damaged": "Girlfriend was hurt!",
   "chat.girlfriend-mod.defeated": "Girlfriend has fallen...",
   "config.girlfriend-mod.provider.chutes": "Chutes AI",
-  "config.girlfriend-mod.provider.openrouter": "OpenRouter"
+  "config.girlfriend-mod.provider.openrouter": "OpenRouter",
+  "config.girlfriend-mod.texture_path": "Custom Texture Path"
 }
