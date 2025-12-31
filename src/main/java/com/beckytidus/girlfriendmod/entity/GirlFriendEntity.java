@@ -1,10 +1,11 @@
 package com.beckytidus.girlfriendmod.entity;
 
-import com.beckytidus.girlfriendmod.ai.ChutesClient;
 import com.beckytidus.girlfriendmod.ai.AIClientManager;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.InventoryOwner;
+import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -12,6 +13,7 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.storage.ReadView;
@@ -21,13 +23,15 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-public class GirlFriendEntity extends PathAwareEntity {
+public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner {
     private int relationshipLevel = 0;
     private int maxRelationshipLevel = 100;
     private long lastPhraseTime = 0;
-    private long lastGiftTime = 0;
     private long lastHealTime = 0;
     private String playerCustomName = "";
     
@@ -36,6 +40,9 @@ public class GirlFriendEntity extends PathAwareEntity {
     
     private boolean isFollowing = true;
     
+    // Inventory: 8 slots (1 row)
+    private final SimpleInventory inventory = new SimpleInventory(8);
+    
     // AI Components
     private ConversationManager conversationManager;
     private String gameContext = "Standing idly.";
@@ -43,8 +50,15 @@ public class GirlFriendEntity extends PathAwareEntity {
     public GirlFriendEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
         this.setCustomName(Text.literal("Girlfriend"));
+        // Remove default listener, we handle logic manually
+        this.inventory.addListener(inv -> {}); 
     }
     
+    @Override
+    public SimpleInventory getInventory() {
+        return this.inventory;
+    }
+
     // --- Persistence Logic (NBT / Data Views) ---
     @Override
     public void writeCustomData(WriteView nbt) {
@@ -57,6 +71,9 @@ public class GirlFriendEntity extends PathAwareEntity {
             nbt.putLong("OwnerMost", this.ownerUuid.getMostSignificantBits());
             nbt.putLong("OwnerLeast", this.ownerUuid.getLeastSignificantBits());
         }
+
+        // Use InventoryOwner's default method which accepts WriteView
+        this.writeInventory(nbt);
     }
 
     @Override
@@ -72,6 +89,9 @@ public class GirlFriendEntity extends PathAwareEntity {
         if (most != 0L && least != 0L) {
             this.ownerUuid = new UUID(most, least);
         }
+
+        // Use InventoryOwner's default method which accepts ReadView
+        this.readInventory(nbt);
     }
 
     private ConversationManager getMemory() {
@@ -162,16 +182,71 @@ public class GirlFriendEntity extends PathAwareEntity {
     public void processPlayerChat(String msg) {
         if (!ModConfig.get().enableAI) return;
         
+        // Update context to include inventory info
+        String inventoryCtx = getInventoryContextString();
+        
+        // 1. Add user message to memory
         getMemory().addMessage("user", msg);
         
-        AIClientManager.generateResponse(getMemory().getContextWindow(), 
-            "Current action: " + gameContext + ". Relationship Lv: " + relationshipLevel)
-            .thenAccept(response -> {
-                getMemory().addMessage("assistant", response);
-                if (this.owner != null) {
-                    this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+        // 2. Analyze intent (Is this a request for an item?)
+        AIClientManager.analyzeIntent(msg).thenAccept(isAskingForGift -> {
+            String extraContext = "";
+            
+            // If intent is detected, attempt to give gift on server thread
+            if (isAskingForGift) {
+                CompletableFuture<String> giftResultFuture = new CompletableFuture<>();
+                
+                World world = this.getEntityWorld();
+                if (world instanceof ServerWorld serverWorld) {
+                    serverWorld.getServer().execute(() -> {
+                        String resultItem = this.giveGiftFromInventory();
+                        giftResultFuture.complete(resultItem);
+                    });
+                } else {
+                    giftResultFuture.complete(null);
                 }
-            });
+                
+                try {
+                    String givenItem = giftResultFuture.join();
+                    if (givenItem != null) {
+                        extraContext = " The user asked for a gift and you gave them " + givenItem + " from your inventory.";
+                        getMemory().addMessage("system", "User asked for a gift. You gave them " + givenItem + ".");
+                    } else {
+                        extraContext = " The user asked for a gift but your inventory is empty or has nothing valuable.";
+                        getMemory().addMessage("system", "User asked for a gift but you have nothing to give.");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            // 3. Generate Response
+            AIClientManager.generateResponse(getMemory().getContextWindow(), 
+                "Current action: " + gameContext + ". " + inventoryCtx + ". Relationship Lv: " + relationshipLevel + extraContext)
+                .thenAccept(response -> {
+                    getMemory().addMessage("assistant", response);
+                    if (this.owner != null) {
+                        this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                    }
+                });
+        });
+    }
+
+    // Helper to get inventory description for AI
+    private String getInventoryContextString() {
+        if (inventory.isEmpty()) return "Inventory: [Empty]";
+        StringBuilder sb = new StringBuilder("Inventory: [");
+        boolean first = true;
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack s = inventory.getStack(i);
+            if (!s.isEmpty()) {
+                if (!first) sb.append(", ");
+                sb.append(s.getCount()).append("x ").append(s.getName().getString());
+                first = false;
+            }
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     @Override
@@ -180,6 +255,13 @@ public class GirlFriendEntity extends PathAwareEntity {
 
         if (this.owner == null && this.ownerUuid != null && !this.getEntityWorld().isClient()) {
             this.owner = this.getEntityWorld().getPlayerByUuid(this.ownerUuid);
+        }
+
+        if (!this.getEntityWorld().isClient()) {
+            // Attempt to pickup items every 20 ticks (1 second)
+            if (this.age % 20 == 0) {
+                pickupNearbyItems();
+            }
         }
 
         if (this.owner != null) {
@@ -191,18 +273,39 @@ public class GirlFriendEntity extends PathAwareEntity {
                 lastPhraseTime = currentTime;
             }
 
-            int giftFrequency = Math.max(60000, 90000 - (relationshipLevel * 200));
-            if (currentTime - lastGiftTime > giftFrequency && Math.random() < (0.06 + relationshipLevel * 0.0012)) {
-                this.giveRandomGift();
-                lastGiftTime = currentTime;
-            }
-
             if (this.getHealth() < this.getMaxHealth() * 0.7 && currentTime - lastHealTime > 40000) {
                 this.setHealth(Math.min(this.getHealth() + 5.0f, this.getMaxHealth()));
                 lastHealTime = currentTime;
             }
 
             this.updateNameTag();
+        }
+    }
+    
+    private void pickupNearbyItems() {
+        List<ItemEntity> items = this.getEntityWorld().getEntitiesByClass(
+            ItemEntity.class, 
+            this.getBoundingBox().expand(2.0, 1.0, 2.0),
+            item -> !item.cannotPickup() && item.isAlive()
+        );
+
+        for (ItemEntity itemEntity : items) {
+            ItemStack stack = itemEntity.getStack();
+            ItemStack remainder = this.inventory.addStack(stack);
+            
+            if (remainder.isEmpty()) {
+                // Fully picked up
+                this.sendPickup(itemEntity, stack.getCount());
+                itemEntity.discard();
+                
+                // AI Reaction chance
+                if (Math.random() < 0.3) {
+                    updateGameContext("Picked up " + stack.getName().getString());
+                }
+            } else {
+                // Partially picked up
+                itemEntity.setStack(remainder);
+            }
         }
     }
     
@@ -213,24 +316,38 @@ public class GirlFriendEntity extends PathAwareEntity {
         this.setCustomName(Text.literal(displayName));
     }
 
-    private void giveRandomGift() {
-        if (this.owner != null) {
-             getMemory().addMessage("system", "You gave the player a gift.");
-             ItemStack gift = getRandomGiftItem();
-             if (!this.owner.getInventory().insertStack(gift)) {
-                 this.owner.dropItem(gift, false);
+    /**
+     * Attempts to give a random gift FROM INVENTORY to the owner.
+     * @return The name of the item given, or null if nothing given.
+     */
+    public String giveGiftFromInventory() {
+        if (this.owner != null && !this.inventory.isEmpty()) {
+             // Find non-empty slots
+             List<Integer> slots = new ArrayList<>();
+             for(int i=0; i<inventory.size(); i++) {
+                 if(!inventory.getStack(i).isEmpty()) slots.add(i);
              }
-             this.addRelationship(3);
+
+             if (slots.isEmpty()) return null;
+
+             int slotIndex = slots.get((int)(Math.random() * slots.size()));
+             ItemStack gift = inventory.getStack(slotIndex);
+             
+             // Take one item
+             ItemStack toGive = gift.split(1); 
+             if (gift.isEmpty()) {
+                 inventory.setStack(slotIndex, ItemStack.EMPTY);
+             }
+
+             // Give to player
+             if (!this.owner.getInventory().insertStack(toGive)) {
+                 this.owner.dropItem(toGive, false);
+             }
+             
+             this.addRelationship(2);
+             return toGive.getName().getString();
         }
-    }
-    
-    private ItemStack getRandomGiftItem() {
-        ItemStack[] possibleGifts = {
-            new ItemStack(Items.DIAMOND), new ItemStack(Items.EMERALD),
-            new ItemStack(Items.APPLE), new ItemStack(Items.GOLDEN_APPLE),
-            new ItemStack(Items.AMETHYST_SHARD), new ItemStack(Items.POPPY)
-        };
-        return possibleGifts[(int)(Math.random() * possibleGifts.length)].copy();
+        return null;
     }
     
     public PlayerEntity getOwner() { return this.owner; }
@@ -246,6 +363,7 @@ public class GirlFriendEntity extends PathAwareEntity {
         String prompt = "Spontaneously comment on the current situation or show affection.";
         if (this.getEntityWorld().isNight()) prompt += " It is night time.";
         if (this.getHealth() < 10) prompt += " You are hurt.";
+        if (!this.inventory.isEmpty()) prompt += " " + getInventoryContextString();
         
         AIClientManager.generateResponse(getMemory().getContextWindow(), 
             prompt + " Context: " + gameContext)
@@ -256,6 +374,7 @@ public class GirlFriendEntity extends PathAwareEntity {
     }
 
     public void feedEntity(ItemStack stack) {
+        // Feeding consumes item immediately for health
         if (stack.isOf(Items.APPLE) || stack.isOf(Items.GOLDEN_APPLE)) {
             this.setHealth(Math.min(this.getHealth() + 5.0f, this.getMaxHealth()));
             this.addRelationship(5);
@@ -269,7 +388,6 @@ public class GirlFriendEntity extends PathAwareEntity {
             this.setHealth(Math.min(this.getHealth() + 6.0f, this.getMaxHealth()));
             this.addRelationship(4);
         } else {
-            // Fallback for other foods
             this.setHealth(Math.min(this.getHealth() + 2.0f, this.getMaxHealth()));
             this.addRelationship(2);
         }
@@ -277,19 +395,23 @@ public class GirlFriendEntity extends PathAwareEntity {
 
     /**
      * Handles reaction when the player gives an item.
-     * Logs to memory and triggers immediate AI speech.
+     * @param wasAddedToInventory true if the item was stored, false if rejected/full
      */
-    public void reactToItem(PlayerEntity player, ItemStack stack) {
+    public void reactToItem(PlayerEntity player, ItemStack stack, boolean wasAddedToInventory) {
         if (!ModConfig.get().enableAI) return;
         
         String itemName = stack.getName().getString();
         String playerName = player.getName().getString();
         String prompt = String.format("%s gave you %s", playerName, itemName);
         
-        // 1. Save to memory
+        if (wasAddedToInventory) {
+            prompt += ". You put it in your inventory.";
+        } else {
+            prompt += ", but your inventory was full so you couldn't take it.";
+        }
+        
         getMemory().addMessage("system", prompt);
         
-        // 2. Trigger AI Response
         AIClientManager.generateResponse(getMemory().getContextWindow(), 
             prompt + ". Context: " + this.gameContext)
             .thenAccept(response -> {

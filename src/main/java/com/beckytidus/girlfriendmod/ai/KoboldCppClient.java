@@ -31,6 +31,13 @@ public class KoboldCppClient {
 
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
         ModConfig config = ModConfig.get();
+        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
+        String prompt = loadSystemPrompt(name, systemContext);
+        return generateRaw(history, prompt);
+    }
+
+    public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
+        ModConfig config = ModConfig.get();
         String baseUrl = config.koboldCppUrl;
 
         if (baseUrl.isEmpty()) {
@@ -42,18 +49,18 @@ public class KoboldCppClient {
         }
 
         if (config.koboldCppUseChatCompletions) {
-            return generateViaChatCompletions(baseUrl, history, systemContext);
+            return generateViaChatCompletions(baseUrl, history, systemPrompt);
         } else {
-            return generateViaKoboldAPI(baseUrl, history, systemContext);
+            return generateViaKoboldAPI(baseUrl, history, systemPrompt);
         }
     }
 
-    private static CompletableFuture<String> generateViaChatCompletions(String baseUrl, List<ChatMessage> history, String systemContext) {
+    private static CompletableFuture<String> generateViaChatCompletions(String baseUrl, List<ChatMessage> history, String systemPrompt) {
         ModConfig config = ModConfig.get();
 
         JsonObject body = new JsonObject();
         body.addProperty("model", config.koboldCppModel);
-        body.addProperty("stream", false); // Match other clients
+        body.addProperty("stream", false);
         body.addProperty("max_tokens", 1024);
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
@@ -62,9 +69,7 @@ public class KoboldCppClient {
 
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
-        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        String prompt = loadSystemPrompt(name, systemContext);
-        system.addProperty("content", prompt);
+        system.addProperty("content", systemPrompt);
         messages.add(system);
 
         for (ChatMessage msg : history) {
@@ -117,14 +122,12 @@ public class KoboldCppClient {
                 });
     }
 
-    private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemContext) {
+    private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemPrompt) {
         ModConfig config = ModConfig.get();
 
         StringBuilder promptBuilder = new StringBuilder();
-
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        String systemPrompt = loadSystemPrompt(name, systemContext);
-
+        
         promptBuilder.append(systemPrompt).append("\n\n");
 
         for (ChatMessage msg : history) {
@@ -145,8 +148,6 @@ public class KoboldCppClient {
         body.addProperty("max_context_length", config.maxHistoryTokens);
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
-        
-        // Removed: top_p, top_k, rep_pen, rep_pen_range to match other APIs
 
         JsonArray stopSequences = new JsonArray();
         stopSequences.add("<|USER|>");
@@ -207,7 +208,7 @@ public class KoboldCppClient {
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
-        return generateResponse(summaryPrompt, "You are a helpful assistant summarizer.");
+        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.");
     }
 
     public static CompletableFuture<Boolean> checkServerAvailable(String url) {

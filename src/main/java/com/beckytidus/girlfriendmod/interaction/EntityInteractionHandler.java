@@ -6,6 +6,7 @@ import net.minecraft.item.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.world.World;
 import com.beckytidus.girlfriendmod.entity.GirlFriendEntity;
 
 public class EntityInteractionHandler {
@@ -21,6 +22,7 @@ public class EntityInteractionHandler {
 
     public static ActionResult handleGirlFriendInteraction(PlayerEntity player, GirlFriendEntity girlfriend, Hand hand) {
         ItemStack stack = player.getStackInHand(hand);
+        World world = player.getEntityWorld();
 
         // Sneak + Empty Hand = Toggle Follow/Wait
         if (stack.isEmpty()) {
@@ -31,24 +33,50 @@ public class EntityInteractionHandler {
             return ActionResult.PASS;
         }
 
-        // We need a copy of the stack for the AI prompt because decrementing modifies it
+        // We need a copy of the stack for the AI prompt because logic might split/modify it
         ItemStack stackCopy = stack.copy();
+        
         boolean interactionSuccess = false;
+        boolean consumed = false;
+        boolean storedInInventory = false;
 
-        // Check for Food or Gifts
+        // Check for Food (Direct Consumption, not stored)
         if (isFood(stack)) {
             girlfriend.feedEntity(stack);
             interactionSuccess = true;
-        } else if (isGift(stack)) {
-            girlfriend.addRelationship(3); // Bonus for non-food gifts
-            interactionSuccess = true;
+            consumed = true; 
+        } 
+        // Check for Gifts (Storage)
+        else if (isGift(stack)) {
+            // Try to add to inventory
+            // We pass a copy to addStack because it modifies the input
+            ItemStack toAdd = stack.copy();
+            toAdd.setCount(1);
+            
+            ItemStack remainder = girlfriend.getInventory().addStack(toAdd);
+            
+            if (remainder.isEmpty()) {
+                // Item accepted
+                girlfriend.addRelationship(3);
+                interactionSuccess = true;
+                consumed = true;
+                storedInInventory = true;
+            } else {
+                // Inventory likely full
+                if (!world.isClient()) {
+                   player.sendMessage(net.minecraft.text.Text.literal("Her inventory is full!"), true);
+                }
+                // Still trigger interaction so AI knows it was attempted but failed
+                girlfriend.reactToItem(player, stackCopy, false);
+                return ActionResult.SUCCESS;
+            }
         }
 
         if (interactionSuccess) {
             // Trigger the AI reaction (speech + memory)
-            girlfriend.reactToItem(player, stackCopy);
+            girlfriend.reactToItem(player, stackCopy, storedInInventory);
             
-            if (!player.isCreative()) {
+            if (!player.isCreative() && consumed) {
                 stack.decrement(1);
             }
             return ActionResult.SUCCESS;
@@ -67,6 +95,7 @@ public class EntityInteractionHandler {
     }
 
     private static boolean isFood(ItemStack stack) {
+        // Keep original food logic for healing
         return stack.isOf(Items.APPLE) || stack.isOf(Items.GOLDEN_APPLE) ||
                stack.isOf(Items.WHEAT) || stack.isOf(Items.BREAD) ||
                stack.isOf(Items.CARROT) || stack.isOf(Items.POTATO) ||
@@ -79,17 +108,7 @@ public class EntityInteractionHandler {
     }
     
     private static boolean isGift(ItemStack stack) {
-        // Expanded list of giftable items that are not food
-        return stack.isOf(Items.DIAMOND) || stack.isOf(Items.EMERALD) || 
-               stack.isOf(Items.AMETHYST_SHARD) || stack.isOf(Items.GOLD_INGOT) || 
-               stack.isOf(Items.NETHERITE_INGOT) || stack.isOf(Items.POPPY) ||
-               stack.isOf(Items.DANDELION) || stack.isOf(Items.BLUE_ORCHID) ||
-               stack.isOf(Items.ALLIUM) || stack.isOf(Items.AZURE_BLUET) ||
-               stack.isOf(Items.RED_TULIP) || stack.isOf(Items.ORANGE_TULIP) ||
-               stack.isOf(Items.WHITE_TULIP) || stack.isOf(Items.PINK_TULIP) ||
-               stack.isOf(Items.OXEYE_DAISY) || stack.isOf(Items.CORNFLOWER) ||
-               stack.isOf(Items.LILY_OF_THE_VALLEY) || stack.isOf(Items.WITHER_ROSE) ||
-               stack.isOf(Items.SUNFLOWER) || stack.isOf(Items.LILAC) ||
-               stack.isOf(Items.ROSE_BUSH) || stack.isOf(Items.PEONY);
+        // Broadened definition: if it's not food and not a name tag, treat it as a potential gift
+        return !isFood(stack) && !stack.isOf(Items.NAME_TAG);
     }
 }

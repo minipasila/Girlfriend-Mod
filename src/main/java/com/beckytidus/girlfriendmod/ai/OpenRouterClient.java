@@ -3,7 +3,6 @@ package com.beckytidus.girlfriendmod.ai;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
@@ -75,6 +74,13 @@ public class OpenRouterClient {
     
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
         ModConfig config = ModConfig.get();
+        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
+        String prompt = loadSystemPrompt(name, systemContext);
+        return generateRaw(history, prompt);
+    }
+
+    public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
+        ModConfig config = ModConfig.get();
         String apiKey = config.getActiveApiKey();
         
         if (apiKey == null || apiKey.isEmpty()) {
@@ -92,11 +98,7 @@ public class OpenRouterClient {
         
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
-        
-        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        String prompt = loadSystemPrompt(name, systemContext);
-        
-        system.addProperty("content", prompt);
+        system.addProperty("content", systemPrompt);
         messages.add(system);
         
         for (ChatMessage msg : history) {
@@ -138,7 +140,6 @@ public class OpenRouterClient {
                             content = message.get("content").getAsString();
                         }
                         
-                        // Fix for empty responses
                         if (content == null || content.trim().isEmpty()) {
                             return "...";
                         }
@@ -154,7 +155,7 @@ public class OpenRouterClient {
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
-        return generateResponse(summaryPrompt, "You are a helpful assistant summarizer.");
+        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.");
     }
     
     public static class ChatMessage {
