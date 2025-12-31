@@ -20,7 +20,10 @@ public class EntityInteractionHandler {
     }
 
     public static ActionResult handleGirlFriendInteraction(PlayerEntity player, GirlFriendEntity girlfriend, Hand hand) {
-        if (player.getStackInHand(hand).isEmpty()) {
+        ItemStack stack = player.getStackInHand(hand);
+
+        // Sneak + Empty Hand = Toggle Follow/Wait
+        if (stack.isEmpty()) {
             if (player.isSneaking()) {
                 girlfriend.toggle();
                 return ActionResult.SUCCESS;
@@ -28,15 +31,30 @@ public class EntityInteractionHandler {
             return ActionResult.PASS;
         }
 
-        var stack = player.getStackInHand(hand);
+        // We need a copy of the stack for the AI prompt because decrementing modifies it
+        ItemStack stackCopy = stack.copy();
+        boolean interactionSuccess = false;
+
+        // Check for Food or Gifts
         if (isFood(stack)) {
             girlfriend.feedEntity(stack);
+            interactionSuccess = true;
+        } else if (isGift(stack)) {
+            girlfriend.addRelationship(3); // Bonus for non-food gifts
+            interactionSuccess = true;
+        }
+
+        if (interactionSuccess) {
+            // Trigger the AI reaction (speech + memory)
+            girlfriend.reactToItem(player, stackCopy);
+            
             if (!player.isCreative()) {
                 stack.decrement(1);
             }
             return ActionResult.SUCCESS;
         }
 
+        // Name Tag Handling
         if (stack.isOf(Items.NAME_TAG)) {
             if (!player.isCreative()) {
                 stack.decrement(1);
@@ -58,5 +76,20 @@ public class EntityInteractionHandler {
                stack.isOf(Items.COOKED_BEEF) || stack.isOf(Items.PORKCHOP) ||
                stack.isOf(Items.COOKED_PORKCHOP) || stack.isOf(Items.CHICKEN) ||
                stack.isOf(Items.COOKED_CHICKEN);
+    }
+    
+    private static boolean isGift(ItemStack stack) {
+        // Expanded list of giftable items that are not food
+        return stack.isOf(Items.DIAMOND) || stack.isOf(Items.EMERALD) || 
+               stack.isOf(Items.AMETHYST_SHARD) || stack.isOf(Items.GOLD_INGOT) || 
+               stack.isOf(Items.NETHERITE_INGOT) || stack.isOf(Items.POPPY) ||
+               stack.isOf(Items.DANDELION) || stack.isOf(Items.BLUE_ORCHID) ||
+               stack.isOf(Items.ALLIUM) || stack.isOf(Items.AZURE_BLUET) ||
+               stack.isOf(Items.RED_TULIP) || stack.isOf(Items.ORANGE_TULIP) ||
+               stack.isOf(Items.WHITE_TULIP) || stack.isOf(Items.PINK_TULIP) ||
+               stack.isOf(Items.OXEYE_DAISY) || stack.isOf(Items.CORNFLOWER) ||
+               stack.isOf(Items.LILY_OF_THE_VALLEY) || stack.isOf(Items.WITHER_ROSE) ||
+               stack.isOf(Items.SUNFLOWER) || stack.isOf(Items.LILAC) ||
+               stack.isOf(Items.ROSE_BUSH) || stack.isOf(Items.PEONY);
     }
 }

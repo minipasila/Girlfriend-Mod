@@ -3,6 +3,7 @@ package com.beckytidus.girlfriendmod.ai;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
@@ -29,10 +30,6 @@ public class OpenRouterClient {
     private static final Gson gson = new Gson();
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-openrouter");
     
-    /**
-     * Loads the system prompt from a config file.
-     * Falls back to default prompt if file doesn't exist or is empty.
-     */
     public static String loadSystemPrompt(String name, String systemContext) {
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
@@ -41,9 +38,7 @@ public class OpenRouterClient {
             try {
                 String customPrompt = Files.readString(promptFile.toPath());
                 if (customPrompt != null && !customPrompt.trim().isEmpty()) {
-                    // Replace {name} placeholder with actual name
                     customPrompt = customPrompt.replace("{name}", name);
-                    // Replace {context} placeholder with system context
                     customPrompt = customPrompt.replace("{context}", systemContext);
                     LOGGER.info("Loaded custom system prompt from file for OpenRouter");
                     return customPrompt;
@@ -56,9 +51,6 @@ public class OpenRouterClient {
         return buildDefaultPrompt(name, systemContext);
     }
     
-    /**
-     * Builds the default system prompt (same as Chutes).
-     */
     private static String buildDefaultPrompt(String name, String systemContext) {
         return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
                 "## CORE LINGUISTIC CONSTRAINTS\n" +
@@ -75,6 +67,8 @@ public class OpenRouterClient {
                 "- NO UPPERCASE. (even for 'i' or names)\n" +
                 "- NO formal punctuation like periods at the end of every sentence; prefer '...' or '~'.\n" +
                 "- NO long-winded explanations.\n\n" +
+                "## IMPORTANT INFORMATION\n" +
+                "- When the player gives you an item you cannot give anything back at that moment.\n\n" +
                 "be a supportive, slightly clunky, and adorable companion. every response must be a single message.\n\n" +
                 "current environment data: " + systemContext;
     }
@@ -96,7 +90,6 @@ public class OpenRouterClient {
         
         JsonArray messages = new JsonArray();
         
-        // System Prompt
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         
@@ -106,7 +99,6 @@ public class OpenRouterClient {
         system.addProperty("content", prompt);
         messages.add(system);
         
-        // History
         for (ChatMessage msg : history) {
             JsonObject m = new JsonObject();
             m.addProperty("role", msg.role);
@@ -116,27 +108,41 @@ public class OpenRouterClient {
         
         body.add("messages", messages);
         
+        String requestJson = gson.toJson(body);
+        LOGGER.info("[AI Debug] OpenRouter Request: {}", requestJson);
+        
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .header("HTTP-Referer", "https://github.com/minipasila/Girlfriend-Mod")
                 .header("X-Title", "Girlfriend Mod")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
         
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
+                    String responseBody = response.body();
+                    LOGGER.info("[AI Debug] OpenRouter Response ({}): {}", response.statusCode(), responseBody);
+                    
                     if (response.statusCode() != 200) {
-                        LOGGER.error("OpenRouter API error: {} - {}", response.statusCode(), response.body());
                         return "error: " + response.statusCode() + "... sorry >.<";
                     }
                     try {
-                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-                        String content = json.getAsJsonArray("choices")
-                                .get(0).getAsJsonObject()
-                                .get("message").getAsJsonObject()
-                                .get("content").getAsString();
+                        JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
+                        JsonObject choice = json.getAsJsonArray("choices").get(0).getAsJsonObject();
+                        JsonObject message = choice.get("message").getAsJsonObject();
+                        
+                        String content = "";
+                        if (message.has("content") && !message.get("content").isJsonNull()) {
+                            content = message.get("content").getAsString();
+                        }
+                        
+                        // Fix for empty responses
+                        if (content == null || content.trim().isEmpty()) {
+                            return "...";
+                        }
+                        
                         return content;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing OpenRouter response", e);

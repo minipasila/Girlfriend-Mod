@@ -46,7 +46,6 @@ public class GirlFriendEntity extends PathAwareEntity {
     }
     
     // --- Persistence Logic (NBT / Data Views) ---
-    // Updated for 1.21.6+: Uses WriteView instead of NbtCompound
     @Override
     public void writeCustomData(WriteView nbt) {
         super.writeCustomData(nbt);
@@ -54,31 +53,26 @@ public class GirlFriendEntity extends PathAwareEntity {
         nbt.putString("CustomName", this.playerCustomName);
         nbt.putBoolean("IsFollowing", this.isFollowing);
         
-        // Manual UUID storage
         if (this.ownerUuid != null) {
             nbt.putLong("OwnerMost", this.ownerUuid.getMostSignificantBits());
             nbt.putLong("OwnerLeast", this.ownerUuid.getLeastSignificantBits());
         }
     }
 
-    // Updated for 1.21.6+: Uses ReadView instead of NbtCompound
     @Override
     public void readCustomData(ReadView nbt) {
         super.readCustomData(nbt);
         
-        // Uses default values to handle Optional returns
         this.relationshipLevel = nbt.getInt("RelationshipLevel", 0);
         this.playerCustomName = nbt.getString("CustomName", "");
         this.isFollowing = nbt.getBoolean("IsFollowing", true);
         
-        // Manual UUID retrieval
         long most = nbt.getLong("OwnerMost", 0L);
         long least = nbt.getLong("OwnerLeast", 0L);
         if (most != 0L && least != 0L) {
             this.ownerUuid = new UUID(most, least);
         }
     }
-    // -------------------------------
 
     private ConversationManager getMemory() {
         if (conversationManager == null) {
@@ -184,8 +178,6 @@ public class GirlFriendEntity extends PathAwareEntity {
     public void tick() {
         super.tick();
 
-        // Restore owner reference from UUID if needed (fixes issue after restart)
-        // Fixed: Use isClient() method instead of field
         if (this.owner == null && this.ownerUuid != null && !this.getEntityWorld().isClient()) {
             this.owner = this.getEntityWorld().getPlayerByUuid(this.ownerUuid);
         }
@@ -245,7 +237,7 @@ public class GirlFriendEntity extends PathAwareEntity {
     
     public void setOwner(PlayerEntity player) { 
         this.owner = player;
-        this.ownerUuid = player.getUuid(); // Save UUID for persistence
+        this.ownerUuid = player.getUuid(); 
     }
 
     private void sayAIComment() {
@@ -267,7 +259,6 @@ public class GirlFriendEntity extends PathAwareEntity {
         if (stack.isOf(Items.APPLE) || stack.isOf(Items.GOLDEN_APPLE)) {
             this.setHealth(Math.min(this.getHealth() + 5.0f, this.getMaxHealth()));
             this.addRelationship(5);
-            getMemory().addMessage("system", "Player fed you an Apple. You loved it.");
         } else if (stack.isOf(Items.WHEAT) || stack.isOf(Items.BREAD)) {
             this.setHealth(Math.min(this.getHealth() + 2.0f, this.getMaxHealth()));
             this.addRelationship(2);
@@ -277,8 +268,36 @@ public class GirlFriendEntity extends PathAwareEntity {
         } else if (stack.isOf(Items.PUMPKIN_PIE) || stack.isOf(Items.CAKE)) {
             this.setHealth(Math.min(this.getHealth() + 6.0f, this.getMaxHealth()));
             this.addRelationship(4);
-            getMemory().addMessage("system", "Player gave you cake/pie. It was delicious.");
+        } else {
+            // Fallback for other foods
+            this.setHealth(Math.min(this.getHealth() + 2.0f, this.getMaxHealth()));
+            this.addRelationship(2);
         }
+    }
+
+    /**
+     * Handles reaction when the player gives an item.
+     * Logs to memory and triggers immediate AI speech.
+     */
+    public void reactToItem(PlayerEntity player, ItemStack stack) {
+        if (!ModConfig.get().enableAI) return;
+        
+        String itemName = stack.getName().getString();
+        String playerName = player.getName().getString();
+        String prompt = String.format("%s gave you %s", playerName, itemName);
+        
+        // 1. Save to memory
+        getMemory().addMessage("system", prompt);
+        
+        // 2. Trigger AI Response
+        AIClientManager.generateResponse(getMemory().getContextWindow(), 
+            prompt + ". Context: " + this.gameContext)
+            .thenAccept(response -> {
+                getMemory().addMessage("assistant", response);
+                if (this.owner != null) {
+                    this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                }
+            });
     }
 
     public void clearMemory() {

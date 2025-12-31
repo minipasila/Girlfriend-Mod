@@ -25,9 +25,6 @@ public class KoboldCppClient {
     private static final Gson gson = new Gson();
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-koboldcpp");
 
-    /**
-     * Loads the system prompt from a config file.
-     */
     public static String loadSystemPrompt(String name, String systemContext) {
         return ChutesClient.loadSystemPrompt(name, systemContext);
     }
@@ -40,7 +37,6 @@ public class KoboldCppClient {
             return CompletableFuture.completedFuture("please configure koboldcpp url in config... ^^");
         }
 
-        // Remove trailing slash if present
         if (baseUrl.endsWith("/")) {
             baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
@@ -57,13 +53,13 @@ public class KoboldCppClient {
 
         JsonObject body = new JsonObject();
         body.addProperty("model", config.koboldCppModel);
+        body.addProperty("stream", false); // Match other clients
         body.addProperty("max_tokens", 1024);
         body.addProperty("temperature", config.temperature);
-        body.addProperty("top_p", 1.0 - (config.minP / 2)); // Approximate conversion
-
+        body.addProperty("min_p", config.minP);
+        
         JsonArray messages = new JsonArray();
 
-        // System Prompt
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
@@ -71,7 +67,6 @@ public class KoboldCppClient {
         system.addProperty("content", prompt);
         messages.add(system);
 
-        // History
         for (ChatMessage msg : history) {
             JsonObject m = new JsonObject();
             m.addProperty("role", msg.role);
@@ -83,24 +78,37 @@ public class KoboldCppClient {
 
         String url = baseUrl + "/v1/chat/completions";
 
+        String requestJson = gson.toJson(body);
+        LOGGER.info("[AI Debug] KoboldCpp (Chat) Request: {}", requestJson);
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
+                    String responseBody = response.body();
+                    LOGGER.info("[AI Debug] KoboldCpp Response ({}): {}", response.statusCode(), responseBody);
+
                     if (response.statusCode() != 200) {
-                        LOGGER.error("KoboldCpp API error: {} - {}", response.statusCode(), response.body());
                         return "error: " + response.statusCode() + "... sorry >.<";
                     }
                     try {
-                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-                        String content = json.getAsJsonArray("choices")
+                        JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
+                        JsonObject message = json.getAsJsonArray("choices")
                                 .get(0).getAsJsonObject()
-                                .get("message").getAsJsonObject()
-                                .get("content").getAsString();
+                                .get("message").getAsJsonObject();
+                        
+                        String content = "";
+                        if (message.has("content") && !message.get("content").isJsonNull()) {
+                            content = message.get("content").getAsString();
+                        }
+
+                        if (content == null || content.trim().isEmpty()) {
+                            return "...";
+                        }
                         return content;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing KoboldCpp response", e);
@@ -112,7 +120,6 @@ public class KoboldCppClient {
     private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemContext) {
         ModConfig config = ModConfig.get();
 
-        // Build prompt in KoboldAI format
         StringBuilder promptBuilder = new StringBuilder();
 
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
@@ -128,7 +135,6 @@ public class KoboldCppClient {
             promptBuilder.append(msg.content).append("\n");
         }
 
-        // Add assistant prefix for continuation
         promptBuilder.append("<|").append(name.toUpperCase()).append("|>\n");
 
         String prompt = promptBuilder.toString();
@@ -136,14 +142,12 @@ public class KoboldCppClient {
         JsonObject body = new JsonObject();
         body.addProperty("prompt", prompt);
         body.addProperty("max_length", 200);
-        body.addProperty("max_context_length", 4096);
+        body.addProperty("max_context_length", config.maxHistoryTokens);
         body.addProperty("temperature", config.temperature);
-        body.addProperty("top_p", 0.9);
-        body.addProperty("top_k", 100);
-        body.addProperty("rep_pen", 1.1f);
-        body.addProperty("rep_pen_range", 512);
+        body.addProperty("min_p", config.minP);
+        
+        // Removed: top_p, top_k, rep_pen, rep_pen_range to match other APIs
 
-        // Stop sequences
         JsonArray stopSequences = new JsonArray();
         stopSequences.add("<|USER|>");
         stopSequences.add("<|SYSTEM|>");
@@ -151,27 +155,36 @@ public class KoboldCppClient {
         body.add("stop_sequence", stopSequences);
 
         String url = baseUrl + "/api/v1/generate";
+        
+        String requestJson = gson.toJson(body);
+        LOGGER.info("[AI Debug] KoboldCpp (Native) Request: {}", requestJson);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
+                    String responseBody = response.body();
+                    LOGGER.info("[AI Debug] KoboldCpp Response ({}): {}", response.statusCode(), responseBody);
+
                     if (response.statusCode() != 200) {
-                        LOGGER.error("KoboldCpp API error: {} - {}", response.statusCode(), response.body());
                         return "error: " + response.statusCode() + "... sorry >.<";
                     }
                     try {
-                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
                         String text = json.getAsJsonArray("results")
                                 .get(0).getAsJsonObject()
                                 .get("text").getAsString();
 
-                        // Clean up the response - remove stop sequences and extra content
                         text = cleanKoboldResponse(text);
+                        
+                        if (text == null || text.trim().isEmpty()) {
+                            return "...";
+                        }
+                        
                         return text;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing KoboldCpp response", e);
@@ -181,7 +194,6 @@ public class KoboldCppClient {
     }
 
     private static String cleanKoboldResponse(String text) {
-        // Remove common stop sequences
         String[] stopSequences = {"<|USER|>", "<|SYSTEM|>", "<|", "\n<|"};
         for (String stop : stopSequences) {
             int idx = text.indexOf(stop);
@@ -198,9 +210,6 @@ public class KoboldCppClient {
         return generateResponse(summaryPrompt, "You are a helpful assistant summarizer.");
     }
 
-    /**
-     * Check if KoboldCpp server is available
-     */
     public static CompletableFuture<Boolean> checkServerAvailable(String url) {
         if (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);
