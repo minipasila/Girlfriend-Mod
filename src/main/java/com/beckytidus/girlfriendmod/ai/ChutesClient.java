@@ -33,7 +33,7 @@ public class ChutesClient {
      * Loads the system prompt from a config file.
      * Falls back to default prompt if file doesn't exist or is empty.
      */
-    private static String loadSystemPrompt(String name, String systemContext) {
+    public static String loadSystemPrompt(String name, String systemContext) {
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
 

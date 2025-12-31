@@ -11,9 +11,12 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - **Feeding System** - Right-click to feed food items and increase relationship
 - **Following Behavior** - Toggle follow/wait with sneak+right-click
 
-### AI Features (New)
-- **Dynamic Conversations** - Contextual dialogue using Chutes AI or OpenRouter
-- **Multiple AI Providers** - Choose between Chutes AI (default) or OpenRouter
+### AI Features (Enhanced)
+- **Dynamic Conversations** - Contextual dialogue using Chutes AI, OpenRouter, or KoboldCpp
+- **Multiple AI Providers** - Choose between cloud services or local AI
+  - **Chutes AI** (cloud) - Powerful cloud models
+  - **OpenRouter** (cloud) - Access to Claude, GPT, and more
+  - **KoboldCpp** (NEW) - Run AI completely offline!
 - **Memory System** - Remembers your conversations across sessions
 - **Customizable Personality** - Edit system prompt for different behavior
 - **Configurable Settings** - Temperature, model, and more via GUI
@@ -53,6 +56,38 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 4. **Sneak + Right-click** to toggle between follow and wait modes
 5. **Press G** to configure AI settings (including provider selection and skin)
 
+## AI Provider Setup
+
+### Option 1: Chutes AI (Cloud)
+1. Get a free API key from [chutes.ai](https://chutes.ai)
+2. Open AI Config (press `G`)
+3. Select "Chutes AI" as provider
+4. Enter your API key
+5. Start chatting with your girlfriend!
+
+### Option 2: OpenRouter (Cloud)
+1. Get an API key from [openrouter.ai](https://openrouter.ai)
+2. Open AI Config (press `G`)
+3. Select "OpenRouter" as provider
+4. Enter your API key
+5. Choose your preferred model (e.g., claude-sonnet-4-20250514)
+6. Start chatting with your girlfriend!
+
+### Option 3: KoboldCpp (Local) ⭐ NEW
+1. Download [KoboldCpp](https://github.com/LostRuins/koboldcpp)
+2. Run KoboldCpp and load a GGUF model
+3. Open AI Config (press `G`)
+4. Select "KoboldCpp (Local)" as provider
+5. Set URL to `http://localhost:5001` (or your custom port)
+6. Choose API format (OpenAI Chat recommended)
+7. Start chatting with your girlfriend - completely offline!
+
+**Benefits of KoboldCpp:**
+- 🔒 **Privacy** - No data sent to the cloud
+- 💰 **Free** - No API costs
+- 📶 **Offline** - Works without internet
+- 🔧 **Customizable** - Use any GGUF model you want
+
 ## Custom Skins
 
 ### Creating a Custom Skin Resource Pack
@@ -79,30 +114,13 @@ You can use various texture path formats:
 - `minecraft:textures/entity/steve.png` (Steve's skin)
 - `your-mod:textures/entity/custom.png` (custom namespace)
 
-## AI Setup
-
-### Option 1: Chutes AI (Default)
-1. Get a free API key from [chutes.ai](https://chutes.ai)
-2. Open AI Config (press `G`)
-3. Select "Chutes AI" as provider
-4. Enter your API key
-5. Start chatting with your girlfriend!
-
-### Option 2: OpenRouter
-1. Get an API key from [openrouter.ai](https://openrouter.ai)
-2. Open AI Config (press `G`)
-3. Select "OpenRouter" as provider
-4. Enter your API key
-5. Choose your preferred model (e.g., claude-sonnet-4-20250514)
-6. Start chatting with your girlfriend!
-
 ## Details
 - **Custom Health**: 40 HP (independent of player health)
 - **Following Range**: 2-16 blocks
 - **Gift Types**: Diamonds, emeralds, apples, golden apples, amethyst shards, poppies
 - **Support**: Multiple girlfriends per player
 - **Compatibility**: Minecraft 1.21.9, Fabric API, Java 21+
-- **AI Providers**: Chutes AI (default), OpenRouter (alternative)
+- **AI Providers**: Chutes AI (cloud), OpenRouter (cloud), KoboldCpp (local)
 - **Skin Support**: Resource pack based with GUI configuration
 
 ## License

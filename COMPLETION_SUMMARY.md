@@ -38,8 +38,7 @@ Fixed owner UUID storage and retrieval for girlfriend persistence across session
 Added support for multiple AI providers:
 - Chutes AI integration (original)
 - OpenRouter integration (new)
-- Provider selection via GUI and config
-- Separate API keys and model settings per provider
+- KoboldCpp integration (new) - Local AI support
 
 ---
 
@@ -84,12 +83,13 @@ Added support for multiple AI providers:
 - ✅ Right-click summoning mechanic
 - ✅ Support for multiple girlfriends per player
 
-### AI System (New & Enhanced)
+### AI System (Enhanced)
 - ✅ **Multiple AI Provider Support**
   - Chutes AI API integration for dynamic conversations
   - OpenRouter API integration as alternative provider
+  - KoboldCpp integration for local/offline AI (NEW)
   - Provider selection via GUI and config file
-  - Separate API keys and model names for each provider
+  - Separate API keys and model settings per provider
 
 - ✅ **Conversation Memory**
   - ConversationManager with persistent storage
@@ -100,7 +100,7 @@ Added support for multiple AI providers:
   - Client-side AI configuration GUI
   - Real-time config sync between client and server
   - Memory clear functionality
-  - Provider selection (Chutes AI / OpenRouter)
+  - Provider selection (Chutes AI / OpenRouter / KoboldCpp)
   - Configurable temperature, minP, max history tokens
 
 - ✅ **System Prompt**
@@ -119,7 +119,7 @@ Added support for multiple AI providers:
 
 ## AI Provider Configuration
 
-### Chutes AI (Default)
+### Chutes AI (Cloud)
 ```json
 {
   "aiProvider": "CHUTES",
@@ -129,7 +129,7 @@ Added support for multiple AI providers:
 ```
 Get API key: https://chutes.ai
 
-### OpenRouter (Alternative)
+### OpenRouter (Cloud)
 ```json
 {
   "aiProvider": "OPENROUTER",
@@ -139,25 +139,49 @@ Get API key: https://chutes.ai
 ```
 Get API key: https://openrouter.ai
 
+### KoboldCpp (Local) - NEW
+```json
+{
+  "aiProvider": "KOBOLDCPP",
+  "koboldCppUrl": "http://localhost:5001",
+  "koboldCppModel": "kcpp",
+  "koboldCppUseChatCompletions": true
+}
+```
+Download: https://github.com/LostRuins/koboldcpp
+
+**Benefits of KoboldCpp:**
+- Runs locally on your machine - no data sent to the cloud
+- No API keys required
+- Completely free to use
+- Supports various GGUF models
+- Privacy-focused - conversations stay on your device
+
 ---
 
 ## Recent Changes (v1.0.X)
 
 ### New Features
+- **KoboldCpp Support**: Added local AI provider support for privacy-conscious users
+- **Multiple API Format Support**: KoboldCpp can use either OpenAI Chat Completions or native KoboldAI API
 - **Custom Skin Support**: Added resource pack-based custom skin support with configurable texture path
 - **OpenRouter Support**: Added alternative AI provider with support for multiple models including Claude, GPT, and others
 - **AI Provider Selection**: Users can now choose between Chutes AI and OpenRouter in the config GUI
-- **Enhanced Config GUI**: Added provider toggle button and separate fields for each provider's settings
-- **Unified AIClientManager**: New class that routes AI requests to the selected provider
+- **Enhanced Config GUI**: Added provider-specific configuration fields
+- **Unified AIClientManager**: Routes requests to the selected provider
 
 ### Code Changes
-- Added `GirlFriendEntityRenderer.java` - Custom texture rendering with GUI configuration
+- Added `GirlFriendEntityRenderer.java` - Custom texture rendering with GUI configuration	
+- Added `KoboldCppClient.java` - Full KoboldCpp API integration
 - Added `OpenRouterClient.java` - Full OpenRouter API integration
 - Added `AIClientManager.java` - Provider-agnostic AI client routing
+- Updated `ModConfig.java` - Added KoboldCpp configuration options
+- Updated `AIConfigScreen.java` - Added KoboldCpp GUI fields
+- Updated `ModNetwork.java` - Added KoboldCpp config sync
 - Updated `ModConfig.java` - Added AIProvider enum and provider-specific settings
 - Updated `AIConfigScreen.java` - Added provider selection UI and texture path field
-- Updated `ModNetwork.java` - Added provider info to config sync packets
+- Updated `ChutesClient.java` - Made loadSystemPrompt public for reuse
 
 ### Bug Fixes
-- Fixed config migration for users upgrading from older versions
-- Fixed API key handling for different providers
+- Fixed visibility issues with GUI widgets
+- Fixed method visibility for cross-client access

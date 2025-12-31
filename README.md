@@ -18,8 +18,8 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 
 ### ✨ New Features (minipasila's Additions - GPLv2 Licensed)
 
-- **🤖 AI-Powered Conversations** - Using Chutes AI API or OpenRouter for dynamic, contextual dialogue
-- **🔄 Multiple AI Provider Support** - Choose between Chutes AI (default) or OpenRouter
+- **🤖 AI-Powered Conversations** - Using Chutes AI API, OpenRouter, or KoboldCpp for dynamic, contextual dialogue
+- **🔄 Multiple AI Provider Support** - Choose between Chutes AI (cloud), OpenRouter (cloud), or KoboldCpp (local)
 - **💬 Relationship Memory System** - Your girlfriend remembers your conversations
 - **⚙️ Configurable AI Settings** - Temperature, model selection, custom prompts
 - **🎨 Customizable System Prompts** - Edit personality via config file
@@ -54,11 +54,11 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Custom Appearance** - Use resource packs for custom skins
 
 ### AI-Powered Conversations
-- **Dynamic Responses** - Context-aware dialogue using Chutes AI or OpenRouter
+- **Dynamic Responses** - Context-aware dialogue using Chutes AI, OpenRouter, or KoboldCpp
 - **Memory & Learning** - She remembers your conversations
-- **Multiple Providers** - Choose your preferred AI service
+- **Multiple Providers** - Choose your preferred AI service (cloud or local)
 - **Customizable Personality** - Edit the system prompt to change her behavior
-- **Multiple Model Support** - Choose your preferred AI model
+- **Local Option** - Run AI completely offline with KoboldCpp
 
 ## 🚀 Getting Started
 
@@ -94,11 +94,14 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 
 ```json
 {
-  "aiProvider": "CHUTES",
+  "aiProvider": "KOBOLDCPP",
   "chutesApiKey": "your-chutes-api-key",
   "chutesModelName": "Qwen/Qwen2.5-VL-72B-Instruct-TEE",
   "openRouterApiKey": "your-openrouter-api-key",
   "openRouterModelName": "anthropic/claude-sonnet-4-20250514",
+  "koboldCppUrl": "http://localhost:5001",
+  "koboldCppModel": "kcpp",
+  "koboldCppUseChatCompletions": true,
   "customName": "YourGirlfriendsName",
   "temperature": 0.85,
   "minP": 0.05,
@@ -108,9 +111,36 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 }
 ```
 
-**Get your free API key at:**
-- [Chutes AI](https://chutes.ai)
-- [OpenRouter](https://openrouter.ai)
+## 🤖 AI Provider Options
+
+### Option 1: Chutes AI (Cloud)
+- Easy to set up - just get an API key
+- Powerful cloud models
+- Requires internet connection
+
+**Get API key:** https://chutes.ai
+
+### Option 2: OpenRouter (Cloud)
+- Access to multiple models (Claude, GPT, etc.)
+- Pay-per-use pricing
+- Requires internet connection
+
+**Get API key:** https://openrouter.ai
+
+### Option 3: KoboldCpp (Local) ⭐ NEW
+- **Runs completely offline** - no data leaves your machine
+- **No API key required**
+- **Free to use**
+- Supports various GGML/GGUF models
+- Perfect for privacy-conscious users
+
+**Download:** https://github.com/LostRuins/koboldcpp
+
+**Setup:**
+1. Download and run KoboldCpp
+2. Load your preferred GGUF model
+3. Set URL to `http://localhost:5001` (or your custom port)
+4. Choose API format (OpenAI Chat recommended)
 
 ## 🎮 Controls
 
@@ -182,7 +212,8 @@ girlfriend-mod/
 │   ├── ai/
 │   │   ├── AIClientManager.java     # Unified AI client router
 │   │   ├── ChutesClient.java        # Chutes AI API integration
-│   │   ├── OpenRouterClient.java    # OpenRouter API integration (NEW)
+│   │   ├── OpenRouterClient.java    # OpenRouter API integration
+│   │   ├── KoboldCppClient.java     # KoboldCpp API integration (NEW)
 │   │   └── ConversationManager.java # Memory system
 │   ├── entity/
 │   │   └── GirlFriendEntity.java    # Core entity
@@ -261,6 +292,7 @@ This means:
 ### Third-Party Dependencies
 - **Chutes AI** - For AI conversation generation ([Terms](https://chutes.ai/terms))
 - **OpenRouter** - Alternative AI provider ([Terms](https://openrouter.ai/terms))
+- **KoboldCpp** - Local AI provider ([Terms](https://github.com/LostRuins/koboldcpp))
 - **Fabric API** - Minecraft modding API ([License](https://github.com/FabricMC/fabric/blob/master/LICENSE))
 - **Gson** - JSON serialization ([License](https://github.com/google/gson/blob/master/LICENSE))
 

@@ -1,0 +1,229 @@
+package com.beckytidus.girlfriendmod.ai;
+
+import com.beckytidus.girlfriendmod.config.ModConfig;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+public class KoboldCppClient {
+    private static final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(30))
+            .build();
+    private static final Gson gson = new Gson();
+    private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-koboldcpp");
+
+    /**
+     * Loads the system prompt from a config file.
+     */
+    public static String loadSystemPrompt(String name, String systemContext) {
+        return ChutesClient.loadSystemPrompt(name, systemContext);
+    }
+
+    public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
+        ModConfig config = ModConfig.get();
+        String baseUrl = config.koboldCppUrl;
+
+        if (baseUrl.isEmpty()) {
+            return CompletableFuture.completedFuture("please configure koboldcpp url in config... ^^");
+        }
+
+        // Remove trailing slash if present
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        if (config.koboldCppUseChatCompletions) {
+            return generateViaChatCompletions(baseUrl, history, systemContext);
+        } else {
+            return generateViaKoboldAPI(baseUrl, history, systemContext);
+        }
+    }
+
+    private static CompletableFuture<String> generateViaChatCompletions(String baseUrl, List<ChatMessage> history, String systemContext) {
+        ModConfig config = ModConfig.get();
+
+        JsonObject body = new JsonObject();
+        body.addProperty("model", config.koboldCppModel);
+        body.addProperty("max_tokens", 1024);
+        body.addProperty("temperature", config.temperature);
+        body.addProperty("top_p", 1.0 - (config.minP / 2)); // Approximate conversion
+
+        JsonArray messages = new JsonArray();
+
+        // System Prompt
+        JsonObject system = new JsonObject();
+        system.addProperty("role", "system");
+        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
+        String prompt = loadSystemPrompt(name, systemContext);
+        system.addProperty("content", prompt);
+        messages.add(system);
+
+        // History
+        for (ChatMessage msg : history) {
+            JsonObject m = new JsonObject();
+            m.addProperty("role", msg.role);
+            m.addProperty("content", msg.content);
+            messages.add(m);
+        }
+
+        body.add("messages", messages);
+
+        String url = baseUrl + "/v1/chat/completions";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() != 200) {
+                        LOGGER.error("KoboldCpp API error: {} - {}", response.statusCode(), response.body());
+                        return "error: " + response.statusCode() + "... sorry >.<";
+                    }
+                    try {
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        String content = json.getAsJsonArray("choices")
+                                .get(0).getAsJsonObject()
+                                .get("message").getAsJsonObject()
+                                .get("content").getAsString();
+                        return content;
+                    } catch (Exception e) {
+                        LOGGER.error("Error parsing KoboldCpp response", e);
+                        return "error parsing response... " + e.getMessage();
+                    }
+                });
+    }
+
+    private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemContext) {
+        ModConfig config = ModConfig.get();
+
+        // Build prompt in KoboldAI format
+        StringBuilder promptBuilder = new StringBuilder();
+
+        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
+        String systemPrompt = loadSystemPrompt(name, systemContext);
+
+        promptBuilder.append(systemPrompt).append("\n\n");
+
+        for (ChatMessage msg : history) {
+            String role = msg.role.equals("user") ? "User" :
+                         msg.role.equals("assistant") ? name :
+                         msg.role.toUpperCase();
+            promptBuilder.append("<|").append(role).append("|>\n");
+            promptBuilder.append(msg.content).append("\n");
+        }
+
+        // Add assistant prefix for continuation
+        promptBuilder.append("<|").append(name.toUpperCase()).append("|>\n");
+
+        String prompt = promptBuilder.toString();
+
+        JsonObject body = new JsonObject();
+        body.addProperty("prompt", prompt);
+        body.addProperty("max_length", 200);
+        body.addProperty("max_context_length", 4096);
+        body.addProperty("temperature", config.temperature);
+        body.addProperty("top_p", 0.9);
+        body.addProperty("top_k", 100);
+        body.addProperty("rep_pen", 1.1f);
+        body.addProperty("rep_pen_range", 512);
+
+        // Stop sequences
+        JsonArray stopSequences = new JsonArray();
+        stopSequences.add("<|USER|>");
+        stopSequences.add("<|SYSTEM|>");
+        stopSequences.add("<|");
+        body.add("stop_sequence", stopSequences);
+
+        String url = baseUrl + "/api/v1/generate";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() != 200) {
+                        LOGGER.error("KoboldCpp API error: {} - {}", response.statusCode(), response.body());
+                        return "error: " + response.statusCode() + "... sorry >.<";
+                    }
+                    try {
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        String text = json.getAsJsonArray("results")
+                                .get(0).getAsJsonObject()
+                                .get("text").getAsString();
+
+                        // Clean up the response - remove stop sequences and extra content
+                        text = cleanKoboldResponse(text);
+                        return text;
+                    } catch (Exception e) {
+                        LOGGER.error("Error parsing KoboldCpp response", e);
+                        return "error parsing response... " + e.getMessage();
+                    }
+                });
+    }
+
+    private static String cleanKoboldResponse(String text) {
+        // Remove common stop sequences
+        String[] stopSequences = {"<|USER|>", "<|SYSTEM|>", "<|", "\n<|"};
+        for (String stop : stopSequences) {
+            int idx = text.indexOf(stop);
+            if (idx != -1) {
+                text = text.substring(0, idx);
+            }
+        }
+        return text.trim();
+    }
+
+    public static CompletableFuture<String> summarize(List<ChatMessage> history) {
+        List<ChatMessage> summaryPrompt = new ArrayList<>(history);
+        summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
+        return generateResponse(summaryPrompt, "You are a helpful assistant summarizer.");
+    }
+
+    /**
+     * Check if KoboldCpp server is available
+     */
+    public static CompletableFuture<Boolean> checkServerAvailable(String url) {
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url + "/api/extra/version"))
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> response.statusCode() == 200)
+                .exceptionally(e -> false);
+    }
+
+    public static class ChatMessage {
+        public String role;
+        public String content;
+
+        public ChatMessage(String role, String content) {
+            this.role = role;
+            this.content = content;
+        }
+    }
+}

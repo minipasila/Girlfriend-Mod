@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 public class AIConfigScreen extends Screen {
@@ -22,13 +23,24 @@ public class AIConfigScreen extends Screen {
     private TextFieldWidget chutesModelField;
     private TextFieldWidget openRouterApiKeyField;
     private TextFieldWidget openRouterModelField;
+    private TextFieldWidget koboldCppUrlField;
+    private TextFieldWidget koboldCppModelField;
     private TextFieldWidget nameField;
     private TextFieldWidget tokenField;
     private TextFieldWidget minPField;
     private TextFieldWidget tempField;
     private TextFieldWidget texturePathField;
-    private int currentProviderIndex = 0;
     private ButtonWidget providerButton;
+    private ButtonWidget apiFormatButton;
+    private int currentProviderIndex = 0;
+
+    // Lists to track widgets for visibility toggling
+    private final List<ButtonWidget> chutesButtons = new ArrayList<>();
+    private final List<TextFieldWidget> chutesFields = new ArrayList<>();
+    private final List<ButtonWidget> openRouterButtons = new ArrayList<>();
+    private final List<TextFieldWidget> openRouterFields = new ArrayList<>();
+    private final List<ButtonWidget> koboldCppButtons = new ArrayList<>();
+    private final List<TextFieldWidget> koboldCppFields = new ArrayList<>();
 
     public AIConfigScreen(Screen parent) {
         super(Text.literal("Girlfriend AI Settings"));
@@ -57,42 +69,100 @@ public class AIConfigScreen extends Screen {
 
         y += 30;
 
-        // Chutes API Key
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Chutes API Key:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        // ========== CHUTES AI SECTION ==========
+        ButtonWidget chutesApiKeyLabel = ButtonWidget.builder(Text.literal("Chutes API Key:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        chutesApiKeyLabel.active = false;
+        this.addDrawableChild(chutesApiKeyLabel);
+        chutesButtons.add(chutesApiKeyLabel);
+
         chutesApiKeyField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Chutes API Key"));
         chutesApiKeyField.setMaxLength(256);
         chutesApiKeyField.setText(config.chutesApiKey);
         this.addDrawableChild(chutesApiKeyField);
+        chutesFields.add(chutesApiKeyField);
 
         y += gap;
 
-        // Chutes Model
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Chutes Model:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        ButtonWidget chutesModelLabel = ButtonWidget.builder(Text.literal("Chutes Model:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        chutesModelLabel.active = false;
+        this.addDrawableChild(chutesModelLabel);
+        chutesButtons.add(chutesModelLabel);
+
         chutesModelField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Model"));
         chutesModelField.setText(config.chutesModelName);
         this.addDrawableChild(chutesModelField);
+        chutesFields.add(chutesModelField);
 
         y += gap;
 
-        // OpenRouter API Key
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("OpenRouter API Key:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        // ========== OPENROUTER SECTION ==========
+        ButtonWidget openRouterApiKeyLabel = ButtonWidget.builder(Text.literal("OpenRouter API Key:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        openRouterApiKeyLabel.active = false;
+        this.addDrawableChild(openRouterApiKeyLabel);
+        openRouterButtons.add(openRouterApiKeyLabel);
+
         openRouterApiKeyField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("OpenRouter API Key"));
         openRouterApiKeyField.setMaxLength(256);
         openRouterApiKeyField.setText(config.openRouterApiKey);
         this.addDrawableChild(openRouterApiKeyField);
+        openRouterFields.add(openRouterApiKeyField);
 
         y += gap;
 
-        // OpenRouter Model
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("OpenRouter Model:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        ButtonWidget openRouterModelLabel = ButtonWidget.builder(Text.literal("OpenRouter Model:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        openRouterModelLabel.active = false;
+        this.addDrawableChild(openRouterModelLabel);
+        openRouterButtons.add(openRouterModelLabel);
+
         openRouterModelField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Model"));
         openRouterModelField.setText(config.openRouterModelName);
         this.addDrawableChild(openRouterModelField);
+        openRouterFields.add(openRouterModelField);
 
         y += gap;
 
-        // Name
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Girlfriend Name:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        // ========== KOBOLDCPP SECTION ==========
+        ButtonWidget koboldCppUrlLabel = ButtonWidget.builder(Text.literal("KoboldCpp URL:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        koboldCppUrlLabel.active = false;
+        this.addDrawableChild(koboldCppUrlLabel);
+        koboldCppButtons.add(koboldCppUrlLabel);
+
+        koboldCppUrlField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("KoboldCpp URL"));
+        koboldCppUrlField.setMaxLength(256);
+        koboldCppUrlField.setText(config.koboldCppUrl);
+        this.addDrawableChild(koboldCppUrlField);
+        koboldCppFields.add(koboldCppUrlField);
+
+        y += gap;
+
+        ButtonWidget koboldCppModelLabel = ButtonWidget.builder(Text.literal("KoboldCpp Model:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        koboldCppModelLabel.active = false;
+        this.addDrawableChild(koboldCppModelLabel);
+        koboldCppButtons.add(koboldCppModelLabel);
+
+        koboldCppModelField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Model"));
+        koboldCppModelField.setText(config.koboldCppModel);
+        this.addDrawableChild(koboldCppModelField);
+        koboldCppFields.add(koboldCppModelField);
+
+        y += gap;
+
+        // API Format Toggle (for KoboldCpp)
+        String formatDesc = config.koboldCppUseChatCompletions ? "Format: OpenAI Chat" : "Format: KoboldAPI";
+        apiFormatButton = ButtonWidget.builder(Text.literal(formatDesc), b -> {
+            config.koboldCppUseChatCompletions = !config.koboldCppUseChatCompletions;
+            b.setMessage(Text.literal(config.koboldCppUseChatCompletions ? "Format: OpenAI Chat" : "Format: KoboldAPI"));
+        }).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        this.addDrawableChild(apiFormatButton);
+        koboldCppButtons.add(apiFormatButton);
+
+        y += gap;
+
+        // ========== COMMON SETTINGS ==========
+        ButtonWidget nameLabel = ButtonWidget.builder(Text.literal("Girlfriend Name:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        nameLabel.active = false;
+        this.addDrawableChild(nameLabel);
+
         nameField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Name"));
         nameField.setText(config.customName);
         this.addDrawableChild(nameField);
@@ -100,7 +170,9 @@ public class AIConfigScreen extends Screen {
         y += gap;
 
         // Temperature & Min P (Split Row)
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Temp (0.0-2.0) / Min P (0.0-1.0):"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        ButtonWidget tempLabel = ButtonWidget.builder(Text.literal("Temp (0.0-2.0) / Min P (0.0-1.0):"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        tempLabel.active = false;
+        this.addDrawableChild(tempLabel);
 
         tempField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 98, fieldHeight, Text.literal("Temp"));
         tempField.setText(String.valueOf(config.temperature));
@@ -112,16 +184,20 @@ public class AIConfigScreen extends Screen {
 
         y += gap;
 
-        // Max Tokens
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Max History Tokens:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        ButtonWidget tokenLabel = ButtonWidget.builder(Text.literal("Max History Tokens:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        tokenLabel.active = false;
+        this.addDrawableChild(tokenLabel);
+
         tokenField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Tokens"));
         tokenField.setText(String.valueOf(config.maxHistoryTokens));
         this.addDrawableChild(tokenField);
 
         y += gap;
 
-        // Texture Path
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Skin Texture Path:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build()).active = false;
+        ButtonWidget textureLabel = ButtonWidget.builder(Text.literal("Skin Texture Path:"), b -> {}).dimensions(centerX - 100, y - labelHeight, 200, labelHeight).build();
+        textureLabel.active = false;
+        this.addDrawableChild(textureLabel);
+
         texturePathField = new TextFieldWidget(this.textRenderer, centerX - 100, y, 200, fieldHeight, Text.literal("Texture Path"));
         texturePathField.setMaxLength(256);
         texturePathField.setText(config.customTexturePath);
@@ -159,13 +235,28 @@ public class AIConfigScreen extends Screen {
 
     private void updateFieldsVisibility() {
         ModConfig.AIProvider provider = ModConfig.AIProvider.values()[currentProviderIndex];
-        boolean showChutes = provider == ModConfig.AIProvider.CHUTES;
-        boolean showOpenRouter = provider == ModConfig.AIProvider.OPENROUTER;
 
-        chutesApiKeyField.setVisible(showChutes);
-        chutesModelField.setVisible(showChutes);
-        openRouterApiKeyField.setVisible(showOpenRouter);
-        openRouterModelField.setVisible(showOpenRouter);
+        // Set visibility by enabling/disabling widgets
+        for (ButtonWidget btn : chutesButtons) {
+            btn.visible = provider == ModConfig.AIProvider.CHUTES;
+        }
+        for (TextFieldWidget field : chutesFields) {
+            field.setVisible(provider == ModConfig.AIProvider.CHUTES);
+        }
+
+        for (ButtonWidget btn : openRouterButtons) {
+            btn.visible = provider == ModConfig.AIProvider.OPENROUTER;
+        }
+        for (TextFieldWidget field : openRouterFields) {
+            field.setVisible(provider == ModConfig.AIProvider.OPENROUTER);
+        }
+
+        for (ButtonWidget btn : koboldCppButtons) {
+            btn.visible = provider == ModConfig.AIProvider.KOBOLDCPP;
+        }
+        for (TextFieldWidget field : koboldCppFields) {
+            field.setVisible(provider == ModConfig.AIProvider.KOBOLDCPP);
+        }
     }
 
     private void openSystemPromptFile() {
@@ -228,6 +319,8 @@ public class AIConfigScreen extends Screen {
         config.chutesModelName = chutesModelField.getText();
         config.openRouterApiKey = openRouterApiKeyField.getText();
         config.openRouterModelName = openRouterModelField.getText();
+        config.koboldCppUrl = koboldCppUrlField.getText();
+        config.koboldCppModel = koboldCppModelField.getText();
         config.customName = nameField.getText();
         config.customTexturePath = texturePathField.getText();
 
