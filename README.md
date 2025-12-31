@@ -18,7 +18,8 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 
 ### ✨ New Features (minipasila's Additions - GPLv2 Licensed)
 
-- **🤖 AI-Powered Conversations** - Using Chutes AI API for dynamic, contextual dialogue
+- **🤖 AI-Powered Conversations** - Using Chutes AI API or OpenRouter for dynamic, contextual dialogue
+- **🔄 Multiple AI Provider Support** - Choose between Chutes AI (default) or OpenRouter
 - **💬 Relationship Memory System** - Your girlfriend remembers your conversations
 - **⚙️ Configurable AI Settings** - Temperature, model selection, custom prompts
 - **🎨 Customizable System Prompts** - Edit personality via config file
@@ -50,8 +51,9 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Custom Identity** - Name her whatever you want
 
 ### AI-Powered Conversations
-- **Dynamic Responses** - Context-aware dialogue using Chutes AI
+- **Dynamic Responses** - Context-aware dialogue using Chutes AI or OpenRouter
 - **Memory & Learning** - She remembers your conversations
+- **Multiple Providers** - Choose your preferred AI service
 - **Customizable Personality** - Edit the system prompt to change her behavior
 - **Multiple Model Support** - Choose your preferred AI model
 
@@ -73,9 +75,9 @@ Pattern:
   D = Diamond
   H = Heart of the Sea
 
-   D
- D H D   =   Girlfriend Summoner
-   D
+    D
+  D H D   =   Girlfriend Summoner
+    D
 ```
 
 **Option 2: Use Command**
@@ -89,8 +91,11 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 
 ```json
 {
-  "apiKey": "your-chutes-api-key",
-  "modelName": "Qwen/Qwen2.5-VL-72B-Instruct-TEE",
+  "aiProvider": "CHUTES",
+  "chutesApiKey": "your-chutes-api-key",
+  "chutesModelName": "Qwen/Qwen2.5-VL-72B-Instruct-TEE",
+  "openRouterApiKey": "your-openrouter-api-key",
+  "openRouterModelName": "anthropic/claude-sonnet-4-20250514",
   "customName": "YourGirlfriendsName",
   "temperature": 0.85,
   "minP": 0.05,
@@ -99,7 +104,9 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 }
 ```
 
-**Get your free API key at:** [chutes.ai](https://chutes.ai)
+**Get your free API key at:**
+- [Chutes AI](https://chutes.ai)
+- [OpenRouter](https://openrouter.ai)
 
 ## 🎮 Controls
 
@@ -126,7 +133,9 @@ girlfriend-mod/
 │   ├── GirlfriendMod.java           # Main mod class
 │   ├── GirlfriendModClient.java     # Client initialization
 │   ├── ai/
-│   │   ├── ChutesClient.java        # AI API integration
+│   │   ├── AIClientManager.java     # Unified AI client router
+│   │   ├── ChutesClient.java        # Chutes AI API integration
+│   │   ├── OpenRouterClient.java    # OpenRouter API integration (NEW)
 │   │   └── ConversationManager.java # Memory system
 │   ├── entity/
 │   │   └── GirlFriendEntity.java    # Core entity
@@ -144,9 +153,9 @@ girlfriend-mod/
 │   │   ├── ChatEventHandler.java
 │   │   └── EntityAttributeHandler.java
 │   ├── gui/
-│   │   └── AIConfigScreen.java      # Config GUI
+│   │   └── AIConfigScreen.java      # Config GUI with provider selection
 │   ├── config/
-│   │   └── ModConfig.java
+│   │   └── ModConfig.java           # Config with AI provider support
 │   ├── network/
 │   │   └── ModNetwork.java          # Sync config/memory
 │   └── client/
@@ -168,7 +177,7 @@ girlfriend-mod/
 
 | File | Purpose |
 |------|---------|
-| `girlfriend-mod.json` | AI and mod settings |
+| `girlfriend-mod.json` | AI and mod settings (including provider selection) |
 | `girlfriend-mod/system-prompt.txt` | AI personality |
 | `girlfriend-mod/memories/*.json` | Conversation history |
 
@@ -187,9 +196,11 @@ Available placeholders:
 ## 🤝 License & Attribution
 
 ### Original Project (CC0 1.0 Universal)
+
 This mod is based on the [Girlfriend Mod](https://github.com/UltimateGamerMC/Girlfriend-Mod) by **UltimateGamerMC**, licensed under CC0 1.0 Universal (public domain dedication).
 
 ### Additions & Modifications (GPLv2)
+
 All additions, modifications, and new features implemented by **minipasila** (https://github.com/minipasila) are licensed under the **GNU General Public License v2.0**.
 
 This means:
@@ -200,6 +211,7 @@ This means:
 
 ### Third-Party Dependencies
 - **Chutes AI** - For AI conversation generation ([Terms](https://chutes.ai/terms))
+- **OpenRouter** - Alternative AI provider ([Terms](https://openrouter.ai/terms))
 - **Fabric API** - Minecraft modding API ([License](https://github.com/FabricMC/fabric/blob/master/LICENSE))
 - **Gson** - JSON serialization ([License](https://github.com/google/gson/blob/master/LICENSE))
 
@@ -207,7 +219,7 @@ This means:
 
 This is a work of fiction. The Girlfriend Mod is a fictional companion entity for entertainment purposes in Minecraft. It does not represent a real relationship and should not replace real human connections.
 
-**Because everyone deserves someone who's always happy to see them.** ❤️
+**Because everyone deserves someone who's always happy to see you.** ❤️
 
 ---
 

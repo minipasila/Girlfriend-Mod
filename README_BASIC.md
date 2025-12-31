@@ -12,7 +12,8 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - **Following Behavior** - Toggle follow/wait with sneak+right-click
 
 ### AI Features (New)
-- **Dynamic Conversations** - Contextual dialogue using Chutes AI
+- **Dynamic Conversations** - Contextual dialogue using Chutes AI or OpenRouter
+- **Multiple AI Providers** - Choose between Chutes AI (default) or OpenRouter
 - **Memory System** - Remembers your conversations across sessions
 - **Customizable Personality** - Edit system prompt for different behavior
 - **Configurable Settings** - Temperature, model, and more via GUI
@@ -35,7 +36,7 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
    ```
    D = Diamond
    H = Heart of the Sea
-   
+
    Pattern:
      D
    D H D   =   Girlfriend Summoner
@@ -43,27 +44,34 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
    ```
 
 2. **Right-click** with the item to summon a girlfriend
-
 3. **Right-click** to feed her food items and increase relationship
-
 4. **Sneak + Right-click** to toggle between follow and wait modes
-
-5. **Press G** to configure AI settings
+5. **Press G** to configure AI settings (including provider selection)
 
 ## AI Setup
 
+### Option 1: Chutes AI (Default)
 1. Get a free API key from [chutes.ai](https://chutes.ai)
 2. Open AI Config (press `G`)
-3. Enter your API key
-4. Start chatting with your girlfriend!
+3. Select "Chutes AI" as provider
+4. Enter your API key
+5. Start chatting with your girlfriend!
+
+### Option 2: OpenRouter
+1. Get an API key from [openrouter.ai](https://openrouter.ai)
+2. Open AI Config (press `G`)
+3. Select "OpenRouter" as provider
+4. Enter your API key
+5. Choose your preferred model (e.g., claude-sonnet-4-20250514)
+6. Start chatting with your girlfriend!
 
 ## Details
-
 - **Custom Health**: 40 HP (independent of player health)
 - **Following Range**: 2-16 blocks
 - **Gift Types**: Diamonds, emeralds, apples, golden apples, amethyst shards, poppies
 - **Support**: Multiple girlfriends per player
 - **Compatibility**: Minecraft 1.21.9, Fabric API, Java 21+
+- **AI Providers**: Chutes AI (default), OpenRouter (alternative)
 
 ## License
 

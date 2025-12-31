@@ -34,6 +34,13 @@ Fixed NullPointerException by moving item creation from static initialization to
 ### 3. Owner Persistence ✅
 Fixed owner UUID storage and retrieval for girlfriend persistence across sessions
 
+### 4. AI Provider Support ✅
+Added support for multiple AI providers:
+- Chutes AI integration (original)
+- OpenRouter integration (new)
+- Provider selection via GUI and config
+- Separate API keys and model settings per provider
+
 ---
 
 ## Implemented Features
@@ -77,11 +84,71 @@ Fixed owner UUID storage and retrieval for girlfriend persistence across session
 - ✅ Right-click summoning mechanic
 - ✅ Support for multiple girlfriends per player
 
-### AI System (New)
-- ✅ Chutes AI API integration for dynamic conversations
-- ✅ Conversation memory manager with persistent storage
-- ✅ Automatic conversation summarization for long histories
-- ✅ Configurable system prompt with file-based customization
-- ✅ Client-side AI configuration GUI
-- ✅ Real-time config sync between client and server
-- ✅ Memory clear functionality
+### AI System (New & Enhanced)
+- ✅ **Multiple AI Provider Support**
+  - Chutes AI API integration for dynamic conversations
+  - OpenRouter API integration as alternative provider
+  - Provider selection via GUI and config file
+  - Separate API keys and model names for each provider
+  
+- ✅ **Conversation Memory**
+  - ConversationManager with persistent storage
+  - Automatic conversation summarization for long histories
+  - Memory persistence across sessions
+  
+- ✅ **Configuration**
+  - Client-side AI configuration GUI
+  - Real-time config sync between client and server
+  - Memory clear functionality
+  - Provider selection (Chutes AI / OpenRouter)
+  - Configurable temperature, minP, max history tokens
+  
+- ✅ **System Prompt**
+  - File-based customization
+  - Supports {name} and {context} placeholders
+  - Easy editing via GUI button
+
+---
+
+## AI Provider Configuration
+
+### Chutes AI (Default)
+```json
+{
+  "aiProvider": "CHUTES",
+  "chutesApiKey": "your-api-key",
+  "chutesModelName": "Qwen/Qwen2.5-VL-72B-Instruct-TEE"
+}
+```
+Get API key: https://chutes.ai
+
+### OpenRouter (Alternative)
+```json
+{
+  "aiProvider": "OPENROUTER",
+  "openRouterApiKey": "your-api-key",
+  "openRouterModelName": "anthropic/claude-sonnet-4-20250514"
+}
+```
+Get API key: https://openrouter.ai
+
+---
+
+## Recent Changes (v1.0.X)
+
+### New Features
+- **OpenRouter Support**: Added alternative AI provider with support for multiple models including Claude, GPT, and others
+- **AI Provider Selection**: Users can now choose between Chutes AI and OpenRouter in the config GUI
+- **Enhanced Config GUI**: Added provider toggle button and separate fields for each provider's settings
+- **Unified AIClientManager**: New class that routes AI requests to the selected provider
+
+### Code Changes
+- Added `OpenRouterClient.java` - Full OpenRouter API integration
+- Added `AIClientManager.java` - Provider-agnostic AI client routing
+- Updated `ModConfig.java` - Added AIProvider enum and provider-specific settings
+- Updated `AIConfigScreen.java` - Added provider selection UI
+- Updated `ModNetwork.java` - Added provider info to config sync packets
+
+### Bug Fixes
+- Fixed config migration for users upgrading from older versions
+- Fixed API key handling for different providers
