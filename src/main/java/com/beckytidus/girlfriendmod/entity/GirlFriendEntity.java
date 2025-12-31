@@ -40,8 +40,8 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
     
     private boolean isFollowing = true;
     
-    // Inventory: 8 slots (1 row)
-    private final SimpleInventory inventory = new SimpleInventory(8);
+    // Inventory: Increased to 36 slots (standard player size)
+    private final SimpleInventory inventory = new SimpleInventory(36);
     
     // AI Components
     private ConversationManager conversationManager;
@@ -190,46 +190,83 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
         
         // 2. Analyze intent (Is this a request for an item?)
         AIClientManager.analyzeIntent(msg).thenAccept(isAskingForGift -> {
-            String extraContext = "";
             
-            // If intent is detected, attempt to give gift on server thread
-            if (isAskingForGift) {
-                CompletableFuture<String> giftResultFuture = new CompletableFuture<>();
-                
-                World world = this.getEntityWorld();
-                if (world instanceof ServerWorld serverWorld) {
-                    serverWorld.getServer().execute(() -> {
-                        String resultItem = this.giveGiftFromInventory();
-                        giftResultFuture.complete(resultItem);
-                    });
-                } else {
-                    giftResultFuture.complete(null);
-                }
-                
-                try {
-                    String givenItem = giftResultFuture.join();
-                    if (givenItem != null) {
-                        extraContext = " The user asked for a gift and you gave them " + givenItem + " from your inventory.";
-                        getMemory().addMessage("system", "User asked for a gift. You gave them " + givenItem + ".");
-                    } else {
-                        extraContext = " The user asked for a gift but your inventory is empty or has nothing valuable.";
-                        getMemory().addMessage("system", "User asked for a gift but you have nothing to give.");
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            // If they are NOT asking for a gift, proceed to normal chat generation
+            if (!isAskingForGift) {
+                generateAndSayResponse(inventoryCtx, "");
+                return;
             }
 
-            // 3. Generate Response
-            AIClientManager.generateResponse(getMemory().getContextWindow(), 
-                "Current action: " + gameContext + ". " + inventoryCtx + ". Relationship Lv: " + relationshipLevel + extraContext)
-                .thenAccept(response -> {
-                    getMemory().addMessage("assistant", response);
-                    if (this.owner != null) {
-                        this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
-                    }
-                });
+            // If they ARE asking for a gift, we need to check inventory and ask AI what to give
+            handleGiftRequest(msg, inventoryCtx);
         });
+    }
+
+    private void handleGiftRequest(String userMessage, String inventoryCtx) {
+        List<String> itemNames = getItemNamesFromInventory();
+        
+        // If inventory is empty, short-circuit
+        if (itemNames.isEmpty()) {
+            String extraContext = " The user asked for a gift, but your inventory is completely empty so you have nothing to give.";
+            getMemory().addMessage("system", "User asked for a gift/item, but you have nothing.");
+            generateAndSayResponse(inventoryCtx, extraContext);
+            return;
+        }
+
+        // Ask AI which item to give
+        AIClientManager.selectItemFromInventory(itemNames, userMessage).thenAccept(decision -> {
+            World world = this.getEntityWorld();
+            
+            if (world instanceof ServerWorld serverWorld) {
+                serverWorld.getServer().execute(() -> {
+                    String finalContext;
+                    String systemLog;
+                    
+                    if (decision.equalsIgnoreCase("MISSING")) {
+                        // AI determined we don't have what they want
+                        finalContext = " The user asked for a specific item, but you do not have it in your inventory.";
+                        systemLog = "User asked for an item you don't have.";
+                        // Don't modify relationship if we couldn't give anything.
+                    } else {
+                        // Try to give the specific item selected by AI
+                        boolean success = this.giveSpecificItem(decision);
+                        
+                        if (success) {
+                            finalContext = " The user asked for an item, and you decided to give them your " + decision + ". You successfully gave one to them.";
+                            systemLog = "You gave the user your " + decision + ".";
+                            this.addRelationship(2); // Relationship bonus for giving a gift
+                        } else {
+                            // This case should be rare if AI selected from the actual list, 
+                            // but can happen if player inventory is full, or fuzzy match fails.
+                            finalContext = " The user asked for an item, you tried to give " + decision + " but something went wrong or you couldn't find it.";
+                            systemLog = "You tried to give " + decision + " but failed.";
+                        }
+                    }
+
+                    // Update memory and generate response
+                    getMemory().addMessage("system", systemLog);
+                    generateAndSayResponse(inventoryCtx, finalContext);
+                });
+            }
+        });
+    }
+
+    /**
+     * Helper to generate a conversational AI response and send it to the owner.
+     * @param inventoryCtx String representing current inventory.
+     * @param extraContext Additional context for the AI, specific to the current interaction (e.g., gift outcome).
+     */
+    private void generateAndSayResponse(String inventoryCtx, String extraContext) {
+        AIClientManager.generateResponse(getMemory().getContextWindow(), 
+            "Current action: " + gameContext + ". " + inventoryCtx + ". Relationship Lv: " + relationshipLevel + extraContext)
+            .thenAccept(response -> {
+                getMemory().addMessage("assistant", response);
+                if (this.owner != null) {
+                    this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                }
+                // Update last phrase time so she doesn't speak again too soon if this was a response to player input
+                this.lastPhraseTime = System.currentTimeMillis();
+            });
     }
 
     // Helper to get inventory description for AI
@@ -247,6 +284,81 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    /**
+     * Helper to get a simple list of item display names from the inventory.
+     * Used for providing options to the AI.
+     */
+    private List<String> getItemNamesFromInventory() {
+        List<String> names = new ArrayList<>();
+        for(int i=0; i<inventory.size(); i++) {
+            ItemStack s = inventory.getStack(i);
+            if(!s.isEmpty()) {
+                // Use the display name or translation key converted to string
+                names.add(s.getName().getString());
+            }
+        }
+        return names;
+    }
+
+    /**
+     * Attempts to give a specific item by name match from the girlfriend's inventory to her owner.
+     * This method is called after the AI has decided which item to give.
+     * @param targetItemName The name of the item the AI decided to give.
+     * @return True if an item was successfully given, false otherwise.
+     */
+    public boolean giveSpecificItem(String targetItemName) {
+        if (this.owner == null || this.inventory.isEmpty()) return false;
+
+        for(int i=0; i<inventory.size(); i++) {
+            ItemStack stack = inventory.getStack(i);
+            if (!stack.isEmpty()) {
+                // Check if name contains the target (case-insensitive) to handle loose AI matches
+                // e.g., AI says "diamond" matches "Diamond", or "apples" matches "Apple"
+                String stackName = stack.getName().getString();
+                
+                // Prioritize exact match, then fuzzy contains
+                if (stackName.equalsIgnoreCase(targetItemName) || stackName.toLowerCase().contains(targetItemName.toLowerCase())) {
+                    
+                    ItemStack toGive = stack.split(1); // Take one item
+                    if (stack.isEmpty()) {
+                        inventory.setStack(i, ItemStack.EMPTY); // Clear slot if stack is now empty
+                    }
+
+                    // Attempt to insert into player's inventory, or drop it if inventory is full
+                    if (!this.owner.getInventory().insertStack(toGive)) {
+                        this.owner.dropItem(toGive, false);
+                    }
+                    
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    public PlayerEntity getOwner() { return this.owner; }
+    
+    public void setOwner(PlayerEntity player) { 
+        this.owner = player;
+        this.ownerUuid = player.getUuid(); 
+    }
+
+    private void sayAIComment() {
+        if (!ModConfig.get().enableAI || this.owner == null) return;
+        
+        String prompt = "Spontaneously comment on the current situation or show affection.";
+        if (this.getEntityWorld().isNight()) prompt += " It is night time.";
+        if (this.getHealth() < 10) prompt += " You are hurt.";
+        if (!this.inventory.isEmpty()) prompt += " " + getInventoryContextString();
+        
+        AIClientManager.generateResponse(getMemory().getContextWindow(), 
+            prompt + " Context: " + gameContext)
+            .thenAccept(response -> {
+                getMemory().addMessage("assistant", response);
+                this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+            });
     }
 
     @Override
@@ -291,6 +403,8 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
 
         for (ItemEntity itemEntity : items) {
             ItemStack stack = itemEntity.getStack();
+            String itemName = stack.getName().getString(); // Get name before potentially modifying stack
+            
             ItemStack remainder = this.inventory.addStack(stack);
             
             if (remainder.isEmpty()) {
@@ -298,15 +412,33 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
                 this.sendPickup(itemEntity, stack.getCount());
                 itemEntity.discard();
                 
-                // AI Reaction chance
-                if (Math.random() < 0.3) {
-                    updateGameContext("Picked up " + stack.getName().getString());
+                // Always update context
+                updateGameContext("Picked up " + itemName);
+
+                // Small chance (15%) to trigger vocal reaction
+                if (ModConfig.get().enableAI && Math.random() < 0.15) {
+                    triggerPickupReaction(itemName);
                 }
             } else {
                 // Partially picked up
                 itemEntity.setStack(remainder);
             }
         }
+    }
+
+    private void triggerPickupReaction(String itemName) {
+        String prompt = "You just found and picked up " + itemName + " from the ground.";
+        
+        AIClientManager.generateResponse(getMemory().getContextWindow(), 
+            prompt + " Context: " + gameContext)
+            .thenAccept(response -> {
+                getMemory().addMessage("assistant", response);
+                if (this.owner != null) {
+                    this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                }
+                // Update last phrase time so she doesn't speak again too soon
+                this.lastPhraseTime = System.currentTimeMillis();
+            });
     }
     
     private void updateNameTag() {
@@ -316,62 +448,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
         this.setCustomName(Text.literal(displayName));
     }
 
-    /**
-     * Attempts to give a random gift FROM INVENTORY to the owner.
-     * @return The name of the item given, or null if nothing given.
-     */
-    public String giveGiftFromInventory() {
-        if (this.owner != null && !this.inventory.isEmpty()) {
-             // Find non-empty slots
-             List<Integer> slots = new ArrayList<>();
-             for(int i=0; i<inventory.size(); i++) {
-                 if(!inventory.getStack(i).isEmpty()) slots.add(i);
-             }
-
-             if (slots.isEmpty()) return null;
-
-             int slotIndex = slots.get((int)(Math.random() * slots.size()));
-             ItemStack gift = inventory.getStack(slotIndex);
-             
-             // Take one item
-             ItemStack toGive = gift.split(1); 
-             if (gift.isEmpty()) {
-                 inventory.setStack(slotIndex, ItemStack.EMPTY);
-             }
-
-             // Give to player
-             if (!this.owner.getInventory().insertStack(toGive)) {
-                 this.owner.dropItem(toGive, false);
-             }
-             
-             this.addRelationship(2);
-             return toGive.getName().getString();
-        }
-        return null;
-    }
-    
-    public PlayerEntity getOwner() { return this.owner; }
-    
-    public void setOwner(PlayerEntity player) { 
-        this.owner = player;
-        this.ownerUuid = player.getUuid(); 
-    }
-
-    private void sayAIComment() {
-        if (!ModConfig.get().enableAI || this.owner == null) return;
-        
-        String prompt = "Spontaneously comment on the current situation or show affection.";
-        if (this.getEntityWorld().isNight()) prompt += " It is night time.";
-        if (this.getHealth() < 10) prompt += " You are hurt.";
-        if (!this.inventory.isEmpty()) prompt += " " + getInventoryContextString();
-        
-        AIClientManager.generateResponse(getMemory().getContextWindow(), 
-            prompt + " Context: " + gameContext)
-            .thenAccept(response -> {
-                getMemory().addMessage("assistant", response);
-                this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
-            });
-    }
+    // Removed the old 'giveGiftFromInventory()' method as it is replaced by LLM-driven 'giveSpecificItem'
 
     public void feedEntity(ItemStack stack) {
         // Feeding consumes item immediately for health
@@ -394,7 +471,9 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
     }
 
     /**
-     * Handles reaction when the player gives an item.
+     * Handles reaction when the player gives an item TO THE GIRLFRIEND.
+     * @param player The player who gave the item.
+     * @param stack The item stack that was given.
      * @param wasAddedToInventory true if the item was stored, false if rejected/full
      */
     public void reactToItem(PlayerEntity player, ItemStack stack, boolean wasAddedToInventory) {
@@ -419,6 +498,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
                 if (this.owner != null) {
                     this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
                 }
+                this.lastPhraseTime = System.currentTimeMillis(); // Prevent immediate double speech
             });
     }
 
@@ -440,7 +520,8 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
         if (this.owner != null) {
             String status = this.isFollowing ? "following you" : "waiting here";
             getMemory().addMessage("system", "You are now " + status);
-            this.owner.sendMessage(Text.literal("♥ " + this.getName().getString() + ": I'm " + status), false);
+            this.owner.sendMessage(Text.literal("♥ " + this.getName().getString() + ": i'm " + status), false);
+            this.lastPhraseTime = System.currentTimeMillis(); // Prevent immediate double speech
         }
     }
 
@@ -449,6 +530,16 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner 
         if (source.getAttacker() != null) {
             updateGameContext("Attacked by " + source.getAttacker().getName().getString());
             getMemory().addMessage("system", "You were attacked by " + source.getAttacker().getName().getString());
+            // Trigger an AI response for being hurt
+            AIClientManager.generateResponse(getMemory().getContextWindow(), 
+                "You were just attacked by " + source.getAttacker().getName().getString() + ". How do you feel? Context: " + this.gameContext)
+                .thenAccept(response -> {
+                    getMemory().addMessage("assistant", response);
+                    if (this.owner != null) {
+                        this.owner.sendMessage(Text.literal("<" + this.getName().getString() + "> " + response).formatted(Formatting.LIGHT_PURPLE), false);
+                    }
+                    this.lastPhraseTime = System.currentTimeMillis(); // Prevent immediate double speech
+                });
         }
         
         if (this.owner != null && source.getAttacker() instanceof PlayerEntity && source.getAttacker() != this.owner) {
