@@ -1,30 +1,29 @@
 # Girlfriend Mod
 
-An interactive Minecraft mod that adds a customizable girlfriend entity companion with relationship mechanics, gift-giving, following behavior, and AI-powered conversations.
+An interactive Minecraft mod that adds a customizable girlfriend entity companion with relationship mechanics, inventory management, AI-powered conversations, and smart interactions.
 
 ## Features
 
 ### Core Features
 - **Girlfriend Entity** - Interactive companion that follows you
-- **Relationship System** - Level 0-100 affects behavior frequency
-- **Gift Giving** - Entity periodically gives diamonds, emeralds, and other items
+- **Relationship System** - Level 0-100 affects behavior
+- **Inventory System** - 36-slot inventory; she picks up items and holds your gear
 - **Feeding System** - Right-click to feed food items and increase relationship
 - **Following Behavior** - Toggle follow/wait with sneak+right-click
 
 ### AI Features (Enhanced)
 - **Dynamic Conversations** - Contextual dialogue using Chutes AI, OpenRouter, or KoboldCpp
+- **Smart Requests** - Ask her for items via chat (e.g., "Give me the diamond") and she shares from her inventory
 - **Multiple AI Providers** - Choose between cloud services or local AI
-  - **Chutes AI** (cloud) - Powerful cloud models
-  - **OpenRouter** (cloud) - Access to Claude, GPT, and more
-  - **KoboldCpp** (NEW) - Run AI completely offline!
+  - **Chutes AI** (cloud)
+  - **OpenRouter** (cloud)
+  - **KoboldCpp** (local/offline)
 - **Memory System** - Remembers your conversations across sessions
 - **Customizable Personality** - Edit system prompt for different behavior
-- **Configurable Settings** - Temperature, model, and more via GUI
 
-### Custom Skins (New)
+### Custom Skins
 - **Resource Pack Support** - Create custom skins using standard Minecraft resource packs
 - **GUI Configuration** - Set texture path directly in the AI Config screen
-- **Flexible Format** - Supports any texture path format (namespace:path)
 
 ### Commands
 - `/girlfriend summon <player>` - Summon a girlfriend
@@ -52,9 +51,10 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
    ```
 
 2. **Right-click** with the item to summon a girlfriend
-3. **Right-click** to feed her food items and increase relationship
+3. **Right-click** to feed her food or give her items
 4. **Sneak + Right-click** to toggle between follow and wait modes
-5. **Press G** to configure AI settings (including provider selection and skin)
+5. **Press G** to configure AI settings
+6. **Chat** with her by typing in standard Minecraft chat!
 
 ## AI Provider Setup
 
@@ -73,7 +73,7 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 5. Choose your preferred model (e.g., claude-sonnet-4-20250514)
 6. Start chatting with your girlfriend!
 
-### Option 3: KoboldCpp (Local) ⭐ NEW
+### Option 3: KoboldCpp (Local)
 1. Download [KoboldCpp](https://github.com/LostRuins/koboldcpp)
 2. Run KoboldCpp and load a GGUF model
 3. Open AI Config (press `G`)
@@ -81,12 +81,6 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 5. Set URL to `http://localhost:5001` (or your custom port)
 6. Choose API format (OpenAI Chat recommended)
 7. Start chatting with your girlfriend - completely offline!
-
-**Benefits of KoboldCpp:**
-- 🔒 **Privacy** - No data sent to the cloud
-- 💰 **Free** - No API costs
-- 📶 **Offline** - Works without internet
-- 🔧 **Customizable** - Use any GGUF model you want
 
 ## Custom Skins
 
@@ -117,12 +111,10 @@ You can use various texture path formats:
 ## Details
 - **Custom Health**: 40 HP (independent of player health)
 - **Following Range**: 2-16 blocks
-- **Gift Types**: Diamonds, emeralds, apples, golden apples, amethyst shards, poppies
 - **Support**: Multiple girlfriends per player
 - **Compatibility**: Minecraft 1.21.9, Fabric API, Java 21+
 - **AI Providers**: Chutes AI (cloud), OpenRouter (cloud), KoboldCpp (local)
 - **Skin Support**: Resource pack based with GUI configuration
-
 ## License
 
 Based on [Girlfriend Mod](https://github.com/UltimateGamerMC/Girlfriend-Mod) by UltimateGamerMC (CC0 1.0).

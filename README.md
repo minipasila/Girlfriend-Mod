@@ -18,22 +18,20 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 
 ### ✨ New Features (minipasila's Additions - GPLv2 Licensed)
 
-- **🤖 AI-Powered Conversations** - Using Chutes AI API, OpenRouter, or KoboldCpp for dynamic, contextual dialogue
-- **🔄 Multiple AI Provider Support** - Choose between Chutes AI (cloud), OpenRouter (cloud), or KoboldCpp (local)
+- **🤖 AI-Powered Conversations** - Contextual dialogue using Chutes AI, OpenRouter, or KoboldCpp
+- **🎒 Inventory & Scavenging** - She picks up items, holds your gear, and gives it back when asked
+- **🧠 Intelligent Interaction** - Ask "Do you have any food?" and she will check her inventory and share
+- **🔄 Multiple AI Provider Support** - Choose between Cloud (Chutes/OpenRouter) or Local (KoboldCpp)
 - **💬 Relationship Memory System** - Your girlfriend remembers your conversations
 - **⚙️ Configurable AI Settings** - Temperature, model selection, custom prompts
 - **🎨 Customizable System Prompts** - Edit personality via config file
-- **🔧 Client-Side GUI** - Easy configuration without editing JSON files
-- **📝 Memory Management** - Clear and manage conversation history
 - **🎭 Custom Skins** - Resource pack support for custom girlfriend textures
 
 ### ❤️ Original Features (CC0 Licensed - UltimateGamerMC)
 
 - Companion entity that follows you
 - Relationship system (0-100)
-- Gift system
 - Feeding and healing mechanics
-- Basic romantic dialogue
 - Following/waiting behavior
 - Defending behavior
 
@@ -44,18 +42,18 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Growing Relationship** - Build a real bond through care and conversation
 - **Heartfelt Messages** - Receive genuine affection with romantic phrases
 - **She Remembers You** - AI memory persists across sessions
-- **Your Way** - Custom skins to make her uniquely yours
 
 ### Living, Breathing Connection
 - **Feed & Care** - Share meals to strengthen your bond
 - **Protective Love** - She defends you from hostile mobs
-- **Surprise Gifts** - Receive diamonds, emeralds, and rare treasures
+- **Helpful Scavenger** - She picks up dropped items so you don't miss them
+- **Smart Inventory** - Give her items to hold, or ask for them back via chat
 - **Custom Identity** - Name her whatever you want
 - **Custom Appearance** - Use resource packs for custom skins
 
 ### AI-Powered Conversations
 - **Dynamic Responses** - Context-aware dialogue using Chutes AI, OpenRouter, or KoboldCpp
-- **Memory & Learning** - She remembers your conversations
+- **Intent Analysis** - She understands when you are asking for items vs. just chatting
 - **Multiple Providers** - Choose your preferred AI service (cloud or local)
 - **Customizable Personality** - Edit the system prompt to change her behavior
 - **Local Option** - Run AI completely offline with KoboldCpp
@@ -90,7 +88,7 @@ Pattern:
 
 ### AI Configuration
 
-Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` manually:
+Press `G` to open the AI configuration screen to set up your API keys and preferences, or edit `girlfriend-mod.json` manually:
 
 ```json
 {
@@ -110,7 +108,6 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
   "customTexturePath": "girlfriend-mod:textures/entity/girlfriend.png"
 }
 ```
-
 ## 🤖 AI Provider Options
 
 ### Option 1: Chutes AI (Cloud)
@@ -127,11 +124,11 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 
 **Get API key:** https://openrouter.ai
 
-### Option 3: KoboldCpp (Local) ⭐ NEW
+### Option 3: KoboldCpp (Local) ⭐
 - **Runs completely offline** - no data leaves your machine
 - **No API key required**
 - **Free to use**
-- Supports various GGML/GGUF models
+- Supports various GGUF models
 - Perfect for privacy-conscious users
 
 **Download:** https://github.com/LostRuins/koboldcpp
@@ -142,13 +139,19 @@ Press `G` to open the AI configuration screen, or edit `girlfriend-mod.json` man
 3. Set URL to `http://localhost:5001` (or your custom port)
 4. Choose API format (OpenAI Chat recommended)
 
-## 🎮 Controls
+## 🎮 Controls & Interaction
 
 | Action | Control |
 |--------|---------|
 | Feed | Right-click with food |
+| Give Item | Right-click with item (non-food) |
 | Toggle Follow/Wait | Sneak + Right-click |
 | Open AI Config | Press `G` |
+
+### Chat Interaction
+Simply type in chat to talk to her!
+- **Chat:** "How are you doing?"
+- **Request Items:** "Can I have that diamond?" or "Give me some food"
 
 ## 💬 Commands
 
@@ -200,7 +203,7 @@ Then:
 You can also use external texture paths:
 - `girlfriend-mod:textures/entity/girlfriend.png` (default)
 - `minecraft:textures/entity/steve.png` (use Steve's skin)
-- `custom-mod:textures/entity/my_skin.png` (custom namespace)
+- `custom-mod:textures/entity/my_skin.png` (custom namespace)												 
 
 ## 📁 File Structure
 
@@ -260,7 +263,6 @@ girlfriend-mod/
 | `girlfriend-mod.json` | AI and mod settings (including provider selection) |
 | `girlfriend-mod/system-prompt.txt` | AI personality |
 | `girlfriend-mod/memories/*.json` | Conversation history |
-
 ## 📝 Customizing the AI Personality
 
 Edit `system-prompt.txt` in your config folder to customize your girlfriend's personality:
@@ -271,7 +273,7 @@ roleplay as {name}, a gentle and soft-spoken ai girlfriend...
 
 Available placeholders:
 - `{name}` - Your girlfriend's name
-- `{context}` - Current environment data
+- `{context}` - Current environment data (inventory, health, location)
 
 ## 🤝 License & Attribution
 
@@ -295,7 +297,6 @@ This means:
 - **KoboldCpp** - Local AI provider ([Terms](https://github.com/LostRuins/koboldcpp))
 - **Fabric API** - Minecraft modding API ([License](https://github.com/FabricMC/fabric/blob/master/LICENSE))
 - **Gson** - JSON serialization ([License](https://github.com/google/gson/blob/master/LICENSE))
-
 ## ⚠️ Disclaimer
 
 This is a work of fiction. The Girlfriend Mod is a fictional companion entity for entertainment purposes in Minecraft. It does not represent a real relationship and should not replace real human connections.

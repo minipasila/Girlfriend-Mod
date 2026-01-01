@@ -47,10 +47,11 @@ Added support for multiple AI providers:
 ### Core Entity System
 - ✅ GirlFriendEntity class with custom health system (40 HP max)
 - ✅ Relationship level tracking (0-100)
-- ✅ Auto-healing when below 70% health every 40 seconds
+- ✅ Auto-healing when below 70% health
 - ✅ Following behavior with intelligent distance management (2-16 block range)
 - ✅ Customizable player name support
 - ✅ Owner UUID persistence across sessions
+- ✅ **Inventory System**: 36-slot inventory for holding items
 
 ### Interaction & Feeding
 - ✅ Right-click feeding system with 15+ food types
@@ -59,61 +60,56 @@ Added support for multiple AI providers:
 - ✅ Health restoration based on food quality
 
 ### Dialogue & Affection
-- ✅ 30+ endearing phrases with relationship-based frequency (original)
-- ✅ AI-powered dynamic conversations (new)
+- ✅ **AI-Powered Dynamic Conversations**
+- ✅ **Context Awareness**: She knows time of day, health status, and what she is holding
 - ✅ Damage reaction messages
-- ✅ Gift-giving dialogue
-- ✅ Encouragement system for special foods
-- ✅ Heart symbols (♥) in all messages
+- ✅ Heart symbols (♥) in messages
+- ✅ **Pickup Reactions**: Comments when picking up items from the ground
+- ✅ **Gift Reactions**: Dynamic responses when receiving items from the player
 
-### Gift System
-- ✅ Random gift giving (60-90 second intervals)
-- ✅ 6 gift item types (diamonds, emeralds, apples, golden apples, amethyst shards, poppies)
-- ✅ Relationship-based frequency scaling
-- ✅ Smart inventory handling with drop fallback
+### Inventory & Item Logic (New)
+- ✅ **Automatic Item Pickup**: Automatically picks up nearby dropped items
+- ✅ **Gift Receiving**: Player can give any item for her to hold (stored in inventory)
+- ✅ **Intelligent Item Requests**:
+  - Player can ask via chat (e.g., "give me the diamond", "do you have food?")
+  - AI analyzes intent and checks inventory
+  - Entity tosses the requested item to the player if available
 
 ### Commands
 - ✅ `/girlfriend summon <player>` - Summon a girlfriend
 - ✅ `/girlfriend relationship <player> <0-100>` - Set relationship level
 - ✅ `/girlfriend list <player>` - Count girlfriends for a player
-- ✅ `/girlfriend reloadprompt` - Reload system prompt (new)
-
-### Crafting & Summoning
-- ✅ Craftable summoner item recipe (Diamond + Heart of the Sea + Diamond)
-- ✅ Right-click summoning mechanic
-- ✅ Support for multiple girlfriends per player
+- ✅ `/girlfriend reloadprompt` - Reload system prompt
+- ✅ `/girlfriend config` - Info on how to open config
 
 ### AI System (Enhanced)
 - ✅ **Multiple AI Provider Support**
-  - Chutes AI API integration for dynamic conversations
-  - OpenRouter API integration as alternative provider
-  - KoboldCpp integration for local/offline AI (NEW)
+  - Chutes AI API integration
+  - OpenRouter API integration
+  - KoboldCpp integration for local/offline AI
   - Provider selection via GUI and config file
-  - Separate API keys and model settings per provider
 
 - ✅ **Conversation Memory**
-  - ConversationManager with persistent storage
-  - Automatic conversation summarization for long histories
+  - Persistent conversation history
+  - Automatic summarization for long histories
   - Memory persistence across sessions
 
 - ✅ **Configuration**
-  - Client-side AI configuration GUI
+  - Client-side AI configuration GUI (Press 'G')
   - Real-time config sync between client and server
   - Memory clear functionality
-  - Provider selection (Chutes AI / OpenRouter / KoboldCpp)
   - Configurable temperature, minP, max history tokens
 
 - ✅ **System Prompt**
-  - File-based customization
-  - Supports {name} and {context} placeholders
+  - File-based customization (`system-prompt.txt`)
+  - Supports `{name}` and `{context}` placeholders
   - Easy editing via GUI button
 
-### Custom Skins (New)
+### Custom Skins
 - ✅ **Resource Pack Support**
   - Custom skins via resource packs
-  - Simple setup with girlfriend.png texture
+  - Configurable texture path via GUI
   - Supports standard Minecraft resource pack format
-  - Texture path configurable via GUI
 
 ---
 
@@ -139,7 +135,7 @@ Get API key: https://chutes.ai
 ```
 Get API key: https://openrouter.ai
 
-### KoboldCpp (Local) - NEW
+### KoboldCpp (Local)
 ```json
 {
   "aiProvider": "KOBOLDCPP",
@@ -149,7 +145,6 @@ Get API key: https://openrouter.ai
 }
 ```
 Download: https://github.com/LostRuins/koboldcpp
-
 **Benefits of KoboldCpp:**
 - Runs locally on your machine - no data sent to the cloud
 - No API keys required
@@ -162,26 +157,14 @@ Download: https://github.com/LostRuins/koboldcpp
 ## Recent Changes (v1.0.X)
 
 ### New Features
-- **KoboldCpp Support**: Added local AI provider support for privacy-conscious users
-- **Multiple API Format Support**: KoboldCpp can use either OpenAI Chat Completions or native KoboldAI API
-- **Custom Skin Support**: Added resource pack-based custom skin support with configurable texture path
-- **OpenRouter Support**: Added alternative AI provider with support for multiple models including Claude, GPT, and others
-- **AI Provider Selection**: Users can now choose between Chutes AI and OpenRouter in the config GUI
-- **Enhanced Config GUI**: Added provider-specific configuration fields
-- **Unified AIClientManager**: Routes requests to the selected provider
-
-### Code Changes
-- Added `GirlFriendEntityRenderer.java` - Custom texture rendering with GUI configuration	
-- Added `KoboldCppClient.java` - Full KoboldCpp API integration
-- Added `OpenRouterClient.java` - Full OpenRouter API integration
-- Added `AIClientManager.java` - Provider-agnostic AI client routing
-- Updated `ModConfig.java` - Added KoboldCpp configuration options
-- Updated `AIConfigScreen.java` - Added KoboldCpp GUI fields
-- Updated `ModNetwork.java` - Added KoboldCpp config sync
-- Updated `ModConfig.java` - Added AIProvider enum and provider-specific settings
-- Updated `AIConfigScreen.java` - Added provider selection UI and texture path field
-- Updated `ChutesClient.java` - Made loadSystemPrompt public for reuse
+- **Inventory System**: Replaced random gift spawning with a real inventory system.
+- **Item Interaction**: Entity now picks up items and players can ask for them back via chat.
+- **Improved AI Logic**: Added "Intent Analysis" to detect when players are asking for items.
+- **KoboldCpp Support**: Full local AI support.
+- **OpenRouter Support**: Access to Claude, GPT, and other models.
+- **Custom Skin Support**: Resource pack-based custom skin support with GUI configuration.
 
 ### Bug Fixes
-- Fixed visibility issues with GUI widgets
-- Fixed method visibility for cross-client access
+- Fixed item spawning/creation logic.
+- Fixed null pointer exceptions in AI client handling.
+- Fixed GUI widget visibility toggling.
