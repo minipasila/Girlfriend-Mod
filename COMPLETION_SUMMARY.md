@@ -171,7 +171,7 @@ Download: https://github.com/LostRuins/koboldcpp
 
 ---
 
-## Recent Changes (v1.0.X)
+## Recent Changes (v2.0.X)
 
 ### New Features
 - **Inventory System**: Replaced random gift spawning with a real inventory system.
@@ -250,7 +250,7 @@ src/main/resources/
 ---
 
 ## Build Information
-- **Output JAR**: `build/libs/girlfriend-mod-1.0.X.jar`
+- **Output JAR**: `build/libs/girlfriend-mod-2.0.X.jar`
 - **Minecraft Version**: 1.21.9
 - **Dependencies**: Fabric API 0.134.0+1.21.9, Fabric Loader 0.17.3+
 - **Java Version**: 21+
