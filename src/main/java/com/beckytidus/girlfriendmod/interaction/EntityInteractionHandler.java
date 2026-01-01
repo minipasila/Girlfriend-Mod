@@ -48,8 +48,13 @@ public class EntityInteractionHandler {
         } 
         // Check for Gifts (Storage)
         else if (isGift(stack)) {
-            // Try to add to inventory
-            // We pass a copy to addStack because it modifies the input
+            // FIX: Perform inventory logic ONLY on the server to prevent client desync.
+            // On client, we just return SUCCESS to trigger the arm swing animation, but we DO NOT decrement the stack.
+            if (world.isClient()) {
+                return ActionResult.SUCCESS;
+            }
+
+            // Server-Side Logic
             ItemStack toAdd = stack.copy();
             toAdd.setCount(1);
             
@@ -58,22 +63,24 @@ public class EntityInteractionHandler {
             if (remainder.isEmpty()) {
                 // Item accepted
                 girlfriend.addRelationship(3);
-                interactionSuccess = true;
-                consumed = true;
-                storedInInventory = true;
-            } else {
-                // Inventory likely full
-                if (!world.isClient()) {
-                   player.sendMessage(net.minecraft.text.Text.literal("Her inventory is full!"), true);
+                
+                // Decrement manually on server
+                if (!player.isCreative()) {
+                    stack.decrement(1);
                 }
-                // Still trigger interaction so AI knows it was attempted but failed
+                
+                girlfriend.reactToItem(player, stackCopy, true);
+                return ActionResult.SUCCESS;
+            } else {
+                // Inventory full
+                player.sendMessage(net.minecraft.text.Text.literal("Her inventory is full!"), true);
                 girlfriend.reactToItem(player, stackCopy, false);
                 return ActionResult.SUCCESS;
             }
         }
 
         if (interactionSuccess) {
-            // Trigger the AI reaction (speech + memory)
+            // Trigger the AI reaction (speech + memory) for Food interactions
             girlfriend.reactToItem(player, stackCopy, storedInInventory);
             
             if (!player.isCreative() && consumed) {

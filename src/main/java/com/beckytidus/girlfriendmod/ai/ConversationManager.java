@@ -43,6 +43,15 @@ public class ConversationManager {
         return context;
     }
 
+    /**
+     * Retrieves the last N messages from the history.
+     * Useful for logic engines that need immediate context without the full summary.
+     */
+    public List<ChutesClient.ChatMessage> getRecentHistory(int count) {
+        int start = Math.max(0, history.size() - count);
+        return new ArrayList<>(history.subList(start, history.size()));
+    }
+
     private void checkSummarization() {
         // Rough token estimation: 4 chars per token
         int estimatedTokens = history.stream().mapToInt(m -> m.content.length()).sum() / 4;

@@ -5,12 +5,12 @@
 	"name": "Girlfriend Mod",
 	"description": "An interactive girlfriend entity companion with relationship mechanics, gift-giving, combat assistance, and romantic interactions.",
 	"authors": [
-		"Becky Tidus"
+		"Becky Tidus, minipasila"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/"
 	},
-	"license": "CC0-1.0",
+	"license": "CC0-1.0, GPLv2",
 	"icon": "assets/girlfriend-mod/icon.png",
 	"environment": "*",
 	"entrypoints": {

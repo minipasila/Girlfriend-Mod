@@ -10,6 +10,7 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - **Inventory System** - 36-slot inventory; she picks up items and holds your gear
 - **Feeding System** - Right-click to feed food items and increase relationship
 - **Following Behavior** - Toggle follow/wait with sneak+right-click
+- **Knockout System** - Falls unconscious at 0 HP, respawns after 20 seconds
 
 ### AI Features (Enhanced)
 - **Dynamic Conversations** - Contextual dialogue using Chutes AI, OpenRouter, or KoboldCpp
@@ -20,6 +21,13 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
   - **KoboldCpp** (local/offline)
 - **Memory System** - Remembers your conversations across sessions
 - **Customizable Personality** - Edit system prompt for different behavior
+- **Context Awareness** - Knows time of day, health status, inventory contents
+
+### Combat Features
+- **Auto-Weapon Selection** - Automatically equips best weapon (sword or bow)
+- **Ranged Combat** - Uses bow with arrows from inventory
+- **Owner Defense** - Attacks entities threatening the owner
+- **Kill Reactions** - AI comments on defeating enemies
 
 ### Custom Skins
 - **Resource Pack Support** - Create custom skins using standard Minecraft resource packs
@@ -29,7 +37,11 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - `/girlfriend summon <player>` - Summon a girlfriend
 - `/girlfriend relationship <player> <0-100>` - Set relationship level
 - `/girlfriend list <player>` - Count girlfriends
+- `/girlfriend dismiss <player>` - Dismiss a girlfriend
+- `/girlfriend dismiss all` - Dismiss all girlfriends (OP)
+- `/girlfriend dismiss nearby` - Dismiss nearby girlfriends (OP)
 - `/girlfriend reloadprompt` - Reload system prompt
+- `/girlfriend config` - Info on how to open config
 
 ## Installation
 
@@ -111,10 +123,13 @@ You can use various texture path formats:
 ## Details
 - **Custom Health**: 40 HP (independent of player health)
 - **Following Range**: 2-16 blocks
+- **Inventory Size**: 36 slots
 - **Support**: Multiple girlfriends per player
 - **Compatibility**: Minecraft 1.21.9, Fabric API, Java 21+
 - **AI Providers**: Chutes AI (cloud), OpenRouter (cloud), KoboldCpp (local)
 - **Skin Support**: Resource pack based with GUI configuration
+- **Combat**: Auto-weapon selection, bow combat, owner defense
+
 ## License
 
 Based on [Girlfriend Mod](https://github.com/UltimateGamerMC/Girlfriend-Mod) by UltimateGamerMC (CC0 1.0).

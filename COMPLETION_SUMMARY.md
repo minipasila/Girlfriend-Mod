@@ -52,20 +52,32 @@ Added support for multiple AI providers:
 - ✅ Customizable player name support
 - ✅ Owner UUID persistence across sessions
 - ✅ **Inventory System**: 36-slot inventory for holding items
+- ✅ **Knockout/Respawn System**: Falls unconscious at 0 HP, respawns after 20 seconds
 
 ### Interaction & Feeding
 - ✅ Right-click feeding system with 15+ food types
 - ✅ Sneak+right-click toggle for follow/wait mode
 - ✅ Relationship bonuses for different foods
 - ✅ Health restoration based on food quality
+- ✅ **Auto-Eating**: Automatically consumes food from inventory when health is low
 
-### Dialogue & Affection
+### Combat System
+- ✅ **Auto-Weapon Selection**: Automatically equips best weapon (sword or bow)
+- ✅ **Ranged Combat**: Uses bow with arrows from inventory
+- ✅ **Melee Combat**: Uses sword when available
+- ✅ **Owner Defense**: Attacks entities threatening the owner
+- ✅ **Kill Reactions**: AI comments when defeating enemies
+
+### Dialogue & Affection (AI-Powered)
 - ✅ **AI-Powered Dynamic Conversations**
 - ✅ **Context Awareness**: She knows time of day, health status, and what she is holding
 - ✅ Damage reaction messages
 - ✅ Heart symbols (♥) in messages
 - ✅ **Pickup Reactions**: Comments when picking up items from the ground
 - ✅ **Gift Reactions**: Dynamic responses when receiving items from the player
+- ✅ **Time Awareness**: Comments on day/night transitions
+- ✅ **Kill Reactions**: Reacts to defeating enemies
+- ✅ **Owner Death/Respawn**: Reacts when owner dies and respawns
 
 ### Inventory & Item Logic (New)
 - ✅ **Automatic Item Pickup**: Automatically picks up nearby dropped items
@@ -74,11 +86,15 @@ Added support for multiple AI providers:
   - Player can ask via chat (e.g., "give me the diamond", "do you have food?")
   - AI analyzes intent and checks inventory
   - Entity tosses the requested item to the player if available
+- ✅ **Inventory Management**: Drops useless items when full (AI-assisted decisions)
 
 ### Commands
 - ✅ `/girlfriend summon <player>` - Summon a girlfriend
 - ✅ `/girlfriend relationship <player> <0-100>` - Set relationship level
 - ✅ `/girlfriend list <player>` - Count girlfriends for a player
+- ✅ `/girlfriend dismiss <player>` - Dismiss a girlfriend
+- ✅ `/girlfriend dismiss all` - Dismiss all girlfriends (OP required)
+- ✅ `/girlfriend dismiss nearby` - Dismiss nearby girlfriends (OP required)
 - ✅ `/girlfriend reloadprompt` - Reload system prompt
 - ✅ `/girlfriend config` - Info on how to open config
 
@@ -145,6 +161,7 @@ Get API key: https://openrouter.ai
 }
 ```
 Download: https://github.com/LostRuins/koboldcpp
+
 **Benefits of KoboldCpp:**
 - Runs locally on your machine - no data sent to the cloud
 - No API keys required
@@ -163,8 +180,78 @@ Download: https://github.com/LostRuins/koboldcpp
 - **KoboldCpp Support**: Full local AI support.
 - **OpenRouter Support**: Access to Claude, GPT, and other models.
 - **Custom Skin Support**: Resource pack-based custom skin support with GUI configuration.
+- **Combat System**: Auto-equip weapons and use bows.
+- **Knockout System**: Entity can be knocked out and respawns.
+- **Dismiss Commands**: Added options to dismiss girlfriends.
+- **Client Config GUI**: Press 'G' to configure AI settings.
 
 ### Bug Fixes
 - Fixed item spawning/creation logic.
 - Fixed null pointer exceptions in AI client handling.
 - Fixed GUI widget visibility toggling.
+- Fixed owner persistence across sessions.
+- Fixed NBT data serialization/deserialization.
+
+---
+
+## File Structure
+
+```
+src/main/java/com/beckytidus/girlfriendmod/
+├── GirlfriendMod.java                    # Main mod class
+├── GirlfriendModClient.java              # Client initialization
+├── ai/
+│   ├── AIClientManager.java              # Unified AI client router
+│   ├── ChutesClient.java                 # Chutes AI API integration
+│   ├── OpenRouterClient.java             # OpenRouter API integration
+│   ├── KoboldCppClient.java              # KoboldCpp API integration (NEW)
+│   └── ConversationManager.java          # Memory system
+├── entity/
+│   └── GirlFriendEntity.java             # Core entity implementation
+├── registry/
+│   ├── EntityRegistry.java               # Entity registration
+│   └── ItemRegistry.java                 # Item registration
+├── item/
+│   └── GirlFriendSummonerItem.java       # Summoner item
+├── command/
+│   └── GirlFriendCommand.java            # Command handlers
+├── interaction/
+│   ├── EntityInteractionHandler.java     # Entity interaction system
+│   └── ItemUseHandler.java               # Item use handler
+├── event/
+│   ├── ChatEventHandler.java             # Chat message handler (NEW)
+│   └── EntityAttributeHandler.java       # Attribute setup
+├── gui/
+│   └── AIConfigScreen.java               # Config GUI with provider selection (NEW)
+├── config/
+│   └── ModConfig.java                    # Config with AI provider support
+├── network/
+│   └── ModNetwork.java                   # Sync config/memory (NEW)
+└── client/
+    ├── KeyInputHandler.java              # Keybind handler (NEW)
+    └── render/
+        └── GirlFriendEntityRenderer.java # Custom skin rendering
+
+src/main/resources/
+├── fabric.mod.json                       # Mod metadata
+├── girlfriend-mod.mixins.json            # Mixins configuration
+├── assets/girlfriend-mod/
+│   ├── lang/en_us.json                   # Language file
+│   ├── textures/
+│   │   ├── item/girlfriend_summoner.png
+│   │   └── entity/girlfriend.png
+│   ├── models/item/girlfriend_summoner.json
+│   ├── system-prompt.txt                 # AI personality (NEW)
+│   └── icon.png
+└── data/girlfriend-mod/recipes/
+    └── girlfriend_summoner.json          # Crafting recipe
+```
+
+---
+
+## Build Information
+- **Output JAR**: `build/libs/girlfriend-mod-1.0.X.jar`
+- **Minecraft Version**: 1.21.9
+- **Dependencies**: Fabric API 0.134.0+1.21.9, Fabric Loader 0.17.3+
+- **Java Version**: 21+
+- **Build Status**: ✅ SUCCESSFUL

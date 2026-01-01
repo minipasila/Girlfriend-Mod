@@ -35,11 +35,11 @@ public class ModConfig {
 
     // Chutes AI settings
     public String chutesApiKey = "";
-    public String chutesModelName = "Qwen/Qwen2.5-VL-72B-Instruct-TEE";
+    public String chutesModelName = "deepseek-ai/DeepSeek-V3-0324-TEE";
 
     // OpenRouter settings
     public String openRouterApiKey = "";
-    public String openRouterModelName = "anthropic/claude-sonnet-4-20250514";
+    public String openRouterModelName = "moonshotai/kimi-k2-0905";
 
     // KoboldCpp settings
     public String koboldCppUrl = "http://localhost:5001";

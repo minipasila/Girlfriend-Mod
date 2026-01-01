@@ -26,6 +26,8 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **⚙️ Configurable AI Settings** - Temperature, model selection, custom prompts
 - **🎨 Customizable System Prompts** - Edit personality via config file
 - **🎭 Custom Skins** - Resource pack support for custom girlfriend textures
+- **⚔️ Combat Partner** - Auto-equips weapons and fights by your side
+- **💀 Knockout System** - Falls unconscious at 0 HP, respawns after 20 seconds
 
 ### ❤️ Original Features (CC0 Licensed - UltimateGamerMC)
 
@@ -42,6 +44,7 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Growing Relationship** - Build a real bond through care and conversation
 - **Heartfelt Messages** - Receive genuine affection with romantic phrases
 - **She Remembers You** - AI memory persists across sessions
+- **Intelligent Conversations** - She understands context and responds naturally
 
 ### Living, Breathing Connection
 - **Feed & Care** - Share meals to strengthen your bond
@@ -50,6 +53,7 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Smart Inventory** - Give her items to hold, or ask for them back via chat
 - **Custom Identity** - Name her whatever you want
 - **Custom Appearance** - Use resource packs for custom skins
+- **Knockout & Respawn** - She can be knocked out and will respawn nearby
 
 ### AI-Powered Conversations
 - **Dynamic Responses** - Context-aware dialogue using Chutes AI, OpenRouter, or KoboldCpp
@@ -108,6 +112,7 @@ Press `G` to open the AI configuration screen to set up your API keys and prefer
   "customTexturePath": "girlfriend-mod:textures/entity/girlfriend.png"
 }
 ```
+
 ## 🤖 AI Provider Options
 
 ### Option 1: Chutes AI (Cloud)
@@ -160,7 +165,11 @@ Simply type in chat to talk to her!
 | `/girlfriend summon <player>` | Summon a girlfriend |
 | `/girlfriend relationship <player> <0-100>` | Set relationship level |
 | `/girlfriend list <player>` | Count girlfriends |
+| `/girlfriend dismiss <player>` | Dismiss a girlfriend |
+| `/girlfriend dismiss all` | Dismiss all girlfriends (OP) |
+| `/girlfriend dismiss nearby` | Dismiss nearby girlfriends (OP) |
 | `/girlfriend reloadprompt` | Reload system prompt |
+| `/girlfriend config` | Info on how to open config |
 
 ## 🎭 Custom Skins
 
@@ -203,7 +212,7 @@ Then:
 You can also use external texture paths:
 - `girlfriend-mod:textures/entity/girlfriend.png` (default)
 - `minecraft:textures/entity/steve.png` (use Steve's skin)
-- `custom-mod:textures/entity/my_skin.png` (custom namespace)												 
+- `custom-mod:textures/entity/my_skin.png` (custom namespace)
 
 ## 📁 File Structure
 
@@ -231,7 +240,7 @@ girlfriend-mod/
 │   │   ├── EntityInteractionHandler.java
 │   │   └── ItemUseHandler.java
 │   ├── event/
-│   │   ├── ChatEventHandler.java
+│   │   ├── ChatEventHandler.java    # Chat message handler (NEW)
 │   │   └── EntityAttributeHandler.java
 │   ├── gui/
 │   │   └── AIConfigScreen.java      # Config GUI with provider selection
@@ -263,6 +272,7 @@ girlfriend-mod/
 | `girlfriend-mod.json` | AI and mod settings (including provider selection) |
 | `girlfriend-mod/system-prompt.txt` | AI personality |
 | `girlfriend-mod/memories/*.json` | Conversation history |
+
 ## 📝 Customizing the AI Personality
 
 Edit `system-prompt.txt` in your config folder to customize your girlfriend's personality:
@@ -297,6 +307,7 @@ This means:
 - **KoboldCpp** - Local AI provider ([Terms](https://github.com/LostRuins/koboldcpp))
 - **Fabric API** - Minecraft modding API ([License](https://github.com/FabricMC/fabric/blob/master/LICENSE))
 - **Gson** - JSON serialization ([License](https://github.com/google/gson/blob/master/LICENSE))
+
 ## ⚠️ Disclaimer
 
 This is a work of fiction. The Girlfriend Mod is a fictional companion entity for entertainment purposes in Minecraft. It does not represent a real relationship and should not replace real human connections.

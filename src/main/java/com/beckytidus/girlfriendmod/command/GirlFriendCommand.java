@@ -7,10 +7,13 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import com.beckytidus.girlfriendmod.entity.GirlFriendEntity;
 import com.beckytidus.girlfriendmod.registry.EntityRegistry;
+
+import java.util.List;
 
 public class GirlFriendCommand {
     public static void register() {
@@ -33,6 +36,90 @@ public class GirlFriendCommand {
                             world.spawnEntity(girlfriend);
                             context.getSource().sendMessage(Text.literal("♥ GirlFriend summoned for " + player.getName().getString()));
                             return 1;
+                        })
+                    )
+                )
+                // Dismiss Command Group
+                .then(CommandManager.literal("dismiss")
+                    // Option 1: Dismiss by Player Owner (Existing)
+                    // Usage: /girlfriend dismiss <player>
+                    .then(CommandManager.argument("player", EntityArgumentType.player())
+                        .executes(context -> {
+                            PlayerEntity player = EntityArgumentType.getPlayer(context, "player");
+                            ServerWorld world = context.getSource().getWorld();
+                            
+                            List<GirlFriendEntity> girlfriends = world.getEntitiesByClass(
+                                GirlFriendEntity.class, 
+                                player.getBoundingBox().expand(200), 
+                                g -> g.getOwner() == player
+                            );
+
+                            if (girlfriends.isEmpty()) {
+                                context.getSource().sendMessage(Text.literal("No girlfriend found nearby for " + player.getName().getString()));
+                                return 0;
+                            }
+
+                            int count = 0;
+                            for (GirlFriendEntity gf : girlfriends) {
+                                gf.discard(); // Permanently remove entity
+                                count++;
+                            }
+
+                            context.getSource().sendMessage(Text.literal("Dismissed " + count + " girlfriend(s)."));
+                            return count;
+                        })
+                    )
+                    // Option 2: Dismiss All (Global Purge)
+                    // Usage: /girlfriend dismiss all
+                    .then(CommandManager.literal("all")
+                        .requires(source -> source.hasPermissionLevel(2)) // Requires OP level 2
+                        .executes(context -> {
+                            ServerWorld world = context.getSource().getWorld();
+                            int count = 0;
+                            
+                            // Iterate all entities in the server world to find orphaned girlfriends
+                            for (Entity entity : world.iterateEntities()) {
+                                if (entity instanceof GirlFriendEntity) {
+                                    entity.discard();
+                                    count++;
+                                }
+                            }
+                            
+                            context.getSource().sendMessage(Text.literal("Dismissed " + count + " girlfriend(s) from loaded chunks."));
+                            return count;
+                        })
+                    )
+                    // Option 3: Dismiss Nearby (Radius 5)
+                    // Usage: /girlfriend dismiss nearby
+                    .then(CommandManager.literal("nearby")
+                        .requires(source -> source.hasPermissionLevel(2)) // Requires OP level 2
+                        .executes(context -> {
+                            Entity sourceEntity = context.getSource().getEntity();
+                            if (sourceEntity == null) {
+                                context.getSource().sendMessage(Text.literal("Command must be run by an entity to use 'nearby'."));
+                                return 0;
+                            }
+                            
+                            ServerWorld world = context.getSource().getWorld();
+                            // Find any girlfriend within 5 blocks, ignoring ownership
+                            List<GirlFriendEntity> girlfriends = world.getEntitiesByClass(
+                                GirlFriendEntity.class, 
+                                sourceEntity.getBoundingBox().expand(5.0), 
+                                g -> true
+                            );
+
+                            int count = 0;
+                            for (GirlFriendEntity gf : girlfriends) {
+                                gf.discard();
+                                count++;
+                            }
+
+                            if (count == 0) {
+                                context.getSource().sendMessage(Text.literal("No girlfriends found within 5 blocks."));
+                            } else {
+                                context.getSource().sendMessage(Text.literal("Dismissed " + count + " nearby girlfriend(s)."));
+                            }
+                            return count;
                         })
                     )
                 )
@@ -66,24 +153,14 @@ public class GirlFriendCommand {
                         })
                     )
                 )
-                // Add to registerGirlFriendCommand...
                 .then(CommandManager.literal("config")
                     .executes(context -> {
-                        // Since config is client side GUI, we can't open it directly from server command.
-                        // But for single player integration or if installed on client,
-                        // we usually use a Keybinding or ModMenu.
-                        // For this specific requirement, we'll send a message telling user to use Keybind or ModMenu
-                        // OR if this is Client Side logic running, we open it.
-                        // Best approach for command-based GUI opening in Fabric:
-                        context.getSource().sendMessage(Text.literal("To configure AI, please install ModMenu or use the client-side keybind (if configured)."));
+                        context.getSource().sendMessage(Text.literal("To configure AI, please use the client-side keybind (Default: G)."));
                         return 1;
                     })
                 )
-                // Add this inside registerGirlFriendCommand() after the "config" literal:
                 .then(CommandManager.literal("reloadprompt")
                     .executes(context -> {
-                        // Clear cached prompt if you're caching it
-                        // The next AI call will reload from file automatically
                         context.getSource().sendMessage(Text.literal("♥ System prompt will be reloaded on next AI response!"));
                         return 1;
                     })
