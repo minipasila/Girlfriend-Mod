@@ -35,7 +35,7 @@ public class EntityInteractionHandler {
 
         // We need a copy of the stack for the AI prompt because logic might split/modify it
         ItemStack stackCopy = stack.copy();
-        
+
         boolean interactionSuccess = false;
         boolean consumed = false;
         boolean storedInInventory = false;
@@ -44,8 +44,8 @@ public class EntityInteractionHandler {
         if (isFood(stack)) {
             girlfriend.feedEntity(stack);
             interactionSuccess = true;
-            consumed = true; 
-        } 
+            consumed = true;
+        }
         // Check for Gifts (Storage)
         else if (isGift(stack)) {
             // FIX: Perform inventory logic ONLY on the server to prevent client desync.
@@ -57,23 +57,42 @@ public class EntityInteractionHandler {
             // Server-Side Logic
             ItemStack toAdd = stack.copy();
             toAdd.setCount(1);
-            
+
             ItemStack remainder = girlfriend.getInventory().addStack(toAdd);
-            
+
             if (remainder.isEmpty()) {
                 // Item accepted
                 girlfriend.addRelationship(3);
-                
+
                 // Decrement manually on server
                 if (!player.isCreative()) {
                     stack.decrement(1);
                 }
-                
+
+                // Get the girlfriend's name for the event
+                String name = girlfriend.getCustomName().getString();
+                if (name == null || name.isEmpty() || name.equals("Girlfriend")) {
+                    name = "Girlfriend";
+                }
+                String itemName = stackCopy.getName().getString();
+                String giftEvent = "Player gave " + name + " " + itemName + " (accepted)";
+                girlfriend.getMemory().addMessage("system", giftEvent);
+
                 girlfriend.reactToItem(player, stackCopy, true);
                 return ActionResult.SUCCESS;
             } else {
                 // Inventory full
                 player.sendMessage(net.minecraft.text.Text.literal("Her inventory is full!"), true);
+
+                // Get the girlfriend's name for the event
+                String name = girlfriend.getCustomName().getString();
+                if (name == null || name.isEmpty() || name.equals("Girlfriend")) {
+                    name = "Girlfriend";
+                }
+                String itemName = stackCopy.getName().getString();
+                String giftEvent = "Player gave " + name + " " + itemName + " (inventory full)";
+                girlfriend.getMemory().addMessage("system", giftEvent);
+
                 girlfriend.reactToItem(player, stackCopy, false);
                 return ActionResult.SUCCESS;
             }
@@ -82,7 +101,7 @@ public class EntityInteractionHandler {
         if (interactionSuccess) {
             // Trigger the AI reaction (speech + memory) for Food interactions
             girlfriend.reactToItem(player, stackCopy, storedInInventory);
-            
+
             if (!player.isCreative() && consumed) {
                 stack.decrement(1);
             }
@@ -113,7 +132,7 @@ public class EntityInteractionHandler {
                stack.isOf(Items.COOKED_PORKCHOP) || stack.isOf(Items.CHICKEN) ||
                stack.isOf(Items.COOKED_CHICKEN);
     }
-    
+
     private static boolean isGift(ItemStack stack) {
         // Broadened definition: if it's not food and not a name tag, treat it as a potential gift
         return !isFood(stack) && !stack.isOf(Items.NAME_TAG);

@@ -39,14 +39,14 @@ public class AIConfigScreen extends Screen {
 
     // State
     private int currentProviderIndex = 0;
-    
+
     // Scroll State
     private double scrollAmount = 0;
     private int contentHeight = 0;
 
     // Layout Containers
     private final List<List<ClickableWidget>> layoutRows = new ArrayList<>();
-    
+
     private final List<ClickableWidget> chutesWidgets = new ArrayList<>();
     private final List<ClickableWidget> openRouterWidgets = new ArrayList<>();
     private final List<ClickableWidget> koboldCppWidgets = new ArrayList<>();
@@ -62,7 +62,7 @@ public class AIConfigScreen extends Screen {
         chutesWidgets.clear();
         openRouterWidgets.clear();
         koboldCppWidgets.clear();
-        
+
         int centerX = this.width / 2;
         int fieldHeight = 18;
 
@@ -74,7 +74,7 @@ public class AIConfigScreen extends Screen {
             currentProviderIndex = (currentProviderIndex + 1) % ModConfig.AIProvider.values().length;
             b.setMessage(Text.literal("AI Provider: " + getCurrentProviderName()));
             repositionWidgets();
-        }).dimensions(centerX - 100, 0, 200, 20).build();
+        }).dimensions(centerX - 100, 40, 200, 20).build();
         addRow(providerButton);
 
         // 2. Chutes AI Fields
@@ -88,7 +88,7 @@ public class AIConfigScreen extends Screen {
         // 4. KoboldCpp Fields
         addLabelAndField(centerX, "KoboldCpp URL:", config.koboldCppUrl, w -> koboldCppUrlField = w, koboldCppWidgets);
         addLabelAndField(centerX, "KoboldCpp Model:", config.koboldCppModel, w -> koboldCppModelField = w, koboldCppWidgets);
-        
+
         String formatDesc = config.koboldCppUseChatCompletions ? "Format: OpenAI Chat" : "Format: KoboldAPI";
         apiFormatButton = ButtonWidget.builder(Text.literal(formatDesc), b -> {
             config.koboldCppUseChatCompletions = !config.koboldCppUseChatCompletions;
@@ -105,10 +105,10 @@ public class AIConfigScreen extends Screen {
 
         tempField = new TextFieldWidget(this.textRenderer, centerX - 100, 0, 98, fieldHeight, Text.literal("Temp"));
         tempField.setText(String.valueOf(config.temperature));
-        
+
         minPField = new TextFieldWidget(this.textRenderer, centerX + 2, 0, 98, fieldHeight, Text.literal("Min P"));
         minPField.setText(String.valueOf(config.minP));
-        
+
         List<ClickableWidget> splitRow = new ArrayList<>();
         splitRow.add(tempField);
         splitRow.add(minPField);
@@ -136,17 +136,17 @@ public class AIConfigScreen extends Screen {
 
     private void addLabelAndField(int centerX, String labelText, String defaultValue, java.util.function.Consumer<TextFieldWidget> fieldSetter, List<ClickableWidget> categoryList) {
         ButtonWidget label = createLabel(centerX, labelText);
-        
+
         TextFieldWidget field = new TextFieldWidget(this.textRenderer, centerX - 100, 0, 200, 18, Text.literal(labelText));
         field.setMaxLength(256);
         field.setText(defaultValue);
         fieldSetter.accept(field);
-        
+
         if (categoryList != null) {
             categoryList.add(label);
             categoryList.add(field);
         }
-        
+
         addRow(label);
         addRow(field);
     }
@@ -169,22 +169,22 @@ public class AIConfigScreen extends Screen {
     }
 
     private void repositionWidgets() {
-        int startY = 30;
+        int startY = 70; // Start below the title
         int currentY = startY;
         int gap = 4;
-        
+
         ModConfig.AIProvider provider = ModConfig.AIProvider.values()[currentProviderIndex];
-        
+
         for (List<ClickableWidget> row : layoutRows) {
             boolean rowVisible = false;
             int rowHeight = 0;
-            
+
             for (ClickableWidget w : row) {
                 boolean isWidgetVisible = true;
                 if (chutesWidgets.contains(w) && provider != ModConfig.AIProvider.CHUTES) isWidgetVisible = false;
                 else if (openRouterWidgets.contains(w) && provider != ModConfig.AIProvider.OPENROUTER) isWidgetVisible = false;
                 else if (koboldCppWidgets.contains(w) && provider != ModConfig.AIProvider.KOBOLDCPP) isWidgetVisible = false;
-                
+
                 if (isWidgetVisible) {
                     w.visible = true;
                     w.setY((int)(currentY - scrollAmount));
@@ -194,21 +194,21 @@ public class AIConfigScreen extends Screen {
                     w.visible = false;
                 }
             }
-            
+
             if (rowVisible && rowHeight > 0) {
                 currentY += rowHeight + gap;
             }
         }
-        
+
         this.contentHeight = currentY + (int)scrollAmount - startY + 30;
-        
+
         int maxScroll = getMaxScroll();
         if (scrollAmount > maxScroll) scrollAmount = maxScroll;
         if (scrollAmount < 0) scrollAmount = 0;
     }
 
     private int getMaxScroll() {
-        int scrollableAreaHeight = this.height - 25; 
+        int scrollableAreaHeight = this.height - 65; // Account for title and bottom padding
         return Math.max(0, this.contentHeight - scrollableAreaHeight);
     }
 
@@ -224,32 +224,49 @@ public class AIConfigScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0xA0000000);
-        
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 8, 0xFFFFFF);
-        
-        int topMargin = 25;
-        context.enableScissor(0, topMargin, this.width, this.height);
-        
+        // Draw semi-transparent background instead of calling renderBackground()
+        context.fill(0, 0, this.width, this.height, 0x80000000);
+
+        // Draw a panel background for the content area
+        int panelX = this.width / 2 - 150;
+        int panelY = 30;
+        int panelWidth = 300;
+        int panelHeight = this.height - 60;
+
+        // Draw panel background with rounded corners effect
+        context.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF202020);
+        context.fill(panelX + 1, panelY + 1, panelX + panelWidth - 1, panelY + panelHeight - 1, 0xFF404040);
+
+        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 15, 0xFFFFFF);
+
+        int topMargin = 45;
+        context.enableScissor(panelX, panelY, panelX + panelWidth, panelY + panelHeight);
+
         super.render(context, mouseX, mouseY, delta);
-        
+
         context.disableScissor();
-        
+
         int maxScroll = getMaxScroll();
         if (maxScroll > 0) {
-            int scrollbarX = this.width - 6;
+            int scrollbarX = panelX + panelWidth - 6;
             int scrollbarWidth = 4;
-            int scrollableAreaTop = topMargin;
-            int scrollableAreaHeight = this.height - scrollableAreaTop;
-            
+            int scrollableAreaTop = panelY;
+            int scrollableAreaHeight = panelHeight;
+
             int thumbHeight = Math.max(20, (scrollableAreaHeight * scrollableAreaHeight) / Math.max(this.contentHeight, scrollableAreaHeight));
             int trackHeight = scrollableAreaHeight - thumbHeight;
-            
+
             int thumbY = scrollableAreaTop + (int)((this.scrollAmount / maxScroll) * trackHeight);
-            
+
             context.fill(scrollbarX, scrollableAreaTop, scrollbarX + scrollbarWidth, scrollableAreaTop + scrollableAreaHeight, 0x80000000);
             context.fill(scrollbarX, thumbY, scrollbarX + scrollbarWidth, thumbY + thumbHeight, 0xFF808080);
         }
+    }
+
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Override to prevent calling the parent's renderBackground which causes the blur error
+        // We already draw our own background in render()
     }
 
     private void openSystemPromptFile() {
@@ -312,6 +329,7 @@ public class AIConfigScreen extends Screen {
                 - When your owner gives you an item you cannot give anything back at that moment.
                 - Do not say you're eating something, wait for context to tell you that you ate something then you can say that.
                 - Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.
+                - Take into account the current context/events that JUST HAPPENED.
 
                 be a supportive, slightly clunky, and adorable companion. every response must be a single message.
 

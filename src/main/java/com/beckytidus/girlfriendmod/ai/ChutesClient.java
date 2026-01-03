@@ -1,6 +1,7 @@
 package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
+import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -70,7 +71,8 @@ public class ChutesClient {
                 "## IMPORTANT INFORMATION\n" +
                 "- When your owner gives you an item you cannot give anything back at that moment.\n" +
                 "- Do not say you're eating something, wait for context to tell you that you ate something then you can say that.\n" +
-                "- Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.\n\n" +
+                "- Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.\n" +
+                "- Take into account the current context/events that JUST HAPPENED.\n\n" +
                 "be a supportive, slightly clunky, and adorable companion. every response must be a single message.\n\n" +
                 "current environment data: " + systemContext;
     }
@@ -135,16 +137,21 @@ public class ChutesClient {
                         JsonObject message = json.getAsJsonArray("choices")
                                 .get(0).getAsJsonObject()
                                 .get("message").getAsJsonObject();
-                                
+
                         String content = "";
                         if (message.has("content") && !message.get("content").isJsonNull()) {
                             content = message.get("content").getAsString();
                         }
-                        
+
                         if (content == null || content.trim().isEmpty()) {
                             return "...";
                         }
-                        return content;
+
+                        // NEW: Clean the response
+                        String cleanedContent = ResponseCleaner.cleanResponse(content);
+                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
+
+                        return cleanedContent;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing Chutes response", e);
                         return "error parsing response... " + e.getMessage();

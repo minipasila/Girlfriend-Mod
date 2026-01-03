@@ -1,6 +1,7 @@
 package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
+import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -71,12 +72,18 @@ public class AIClientManager {
      * Uses the latest messages for context.
      */
     public static CompletableFuture<Boolean> analyzeIntent(String userMessage, List<ChutesClient.ChatMessage> history) {
-        String systemPrompt = "You are a logic engine. Analyze the conversation history, specifically the latest message from the user, to see if they are explicitly asking for an item, gift, food, or resource from you. " +
-            "If they are asking for an item (e.g. 'can i have a diamond', 'give me food', 'hand it over', 'do you have that?'), output 'ACTION_GIVE'. " + 
+        String systemPrompt = "You are a logic engine. Analyze the conversation history, specifically the latest message from the user, to see if they are explicitly asking for an item, gift, food, or resource from {NAME}. " +
+            "If they are asking for an item (e.g. 'can i have a diamond', 'give me food', 'hand it over', 'do you have that?'), output 'ACTION_GIVE'. " +
             "If they are just chatting (e.g. 'hello', 'what is that', 'cool'), output 'ACTION_NONE'. " +
             "Only output the action code.";
-        
-        return generateRaw(history, systemPrompt).thenApply(response -> response != null && response.toUpperCase().contains("ACTION_GIVE"));
+
+        return generateRaw(history, systemPrompt).thenApply(response -> {
+            if (response == null) return false;
+
+            // Clean the response before checking
+            String cleaned = ResponseCleaner.cleanResponse(response);
+            return cleaned.toUpperCase().contains("ACTION_GIVE");
+        });
     }
 
     /**
@@ -89,8 +96,8 @@ public class AIClientManager {
         }
 
         String inventoryListStr = inventoryNames.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", "));
-        
-        String systemPrompt = "You are a logic engine. The user is asking for an item from your inventory. " +
+
+        String systemPrompt = "You are a logic engine. The user is asking for an item from {NAME}'s inventory. " +
             "The available items are: [" + inventoryListStr + "]. " +
             "Analyze the conversation history and the user's latest message: \"" + userMessage + "\". " +
             "Rules:\n" +
@@ -102,13 +109,17 @@ public class AIClientManager {
 
         return generateRaw(history, systemPrompt).thenApply(response -> {
             if (response == null) return "MISSING";
-            
-            String rawResponse = response.trim();
+
+            // Clean the response
+            String rawResponse = ResponseCleaner.cleanResponse(response).trim();
+
+            // Remove any trailing punctuation
             if (rawResponse.endsWith(".")) {
                 rawResponse = rawResponse.substring(0, rawResponse.length() - 1);
             }
+
             final String clean = rawResponse;
-            
+
             if (inventoryNames.stream().anyMatch(name -> name.equalsIgnoreCase(clean)) || clean.equalsIgnoreCase("MISSING")) {
                 return clean;
             } else {
@@ -126,8 +137,8 @@ public class AIClientManager {
         }
 
         String inventoryListStr = inventoryNames.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", "));
-        
-        String systemPrompt = "You are a logic engine managing an inventory in Minecraft. The inventory is full. " +
+
+        String systemPrompt = "You are a logic engine managing an inventory in Minecraft. {NAME}'s inventory is full. " +
             "Current items: [" + inventoryListStr + "]. " +
             "Identify the single most useless, common, or least valuable item that should be thrown away to make space. " +
             "Examples of useless items: dirt, cobblestone, rotten flesh, seeds, saplings (if many), flowers. " +
@@ -139,19 +150,20 @@ public class AIClientManager {
 
         return generateRaw(history, systemPrompt).thenApply(response -> {
             if (response == null) return "NONE";
-            
-            String clean = response.trim();
+
+            // Clean the response
+            String clean = ResponseCleaner.cleanResponse(response).trim();
             if (clean.endsWith(".")) clean = clean.substring(0, clean.length() - 1);
-            
+
             final String result = clean;
-            
+
             if (result.equalsIgnoreCase("NONE")) return "NONE";
-            
+
             // Basic validation: Ensure item exists in inventory
             if (inventoryNames.stream().anyMatch(name -> name.equalsIgnoreCase(result))) {
                 return result;
             }
-            
+
             return "NONE";
         });
     }

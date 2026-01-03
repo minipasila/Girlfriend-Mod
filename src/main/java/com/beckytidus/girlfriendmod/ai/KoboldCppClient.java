@@ -1,6 +1,7 @@
 package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
+import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -64,7 +65,7 @@ public class KoboldCppClient {
         body.addProperty("max_tokens", 1024);
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
-        
+
         JsonArray messages = new JsonArray();
 
         JsonObject system = new JsonObject();
@@ -105,7 +106,7 @@ public class KoboldCppClient {
                         JsonObject message = json.getAsJsonArray("choices")
                                 .get(0).getAsJsonObject()
                                 .get("message").getAsJsonObject();
-                        
+
                         String content = "";
                         if (message.has("content") && !message.get("content").isJsonNull()) {
                             content = message.get("content").getAsString();
@@ -114,7 +115,12 @@ public class KoboldCppClient {
                         if (content == null || content.trim().isEmpty()) {
                             return "...";
                         }
-                        return content;
+
+                        // NEW: Clean the response
+                        String cleanedContent = ResponseCleaner.cleanResponse(content);
+                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
+
+                        return cleanedContent;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing KoboldCpp response", e);
                         return "error parsing response... " + e.getMessage();
@@ -127,7 +133,7 @@ public class KoboldCppClient {
 
         StringBuilder promptBuilder = new StringBuilder();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        
+
         promptBuilder.append(systemPrompt).append("\n\n");
 
         for (ChatMessage msg : history) {
@@ -156,7 +162,7 @@ public class KoboldCppClient {
         body.add("stop_sequence", stopSequences);
 
         String url = baseUrl + "/api/v1/generate";
-        
+
         String requestJson = gson.toJson(body);
         LOGGER.info("[AI Debug] KoboldCpp (Native) Request: {}", requestJson);
 
@@ -181,12 +187,16 @@ public class KoboldCppClient {
                                 .get("text").getAsString();
 
                         text = cleanKoboldResponse(text);
-                        
+
                         if (text == null || text.trim().isEmpty()) {
                             return "...";
                         }
-                        
-                        return text;
+
+                        // NEW: Clean the response
+                        String cleanedContent = ResponseCleaner.cleanResponse(text);
+                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
+
+                        return cleanedContent;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing KoboldCpp response", e);
                         return "error parsing response... " + e.getMessage();

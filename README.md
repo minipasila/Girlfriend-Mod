@@ -28,6 +28,9 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **🎭 Custom Skins** - Resource pack support for custom girlfriend textures
 - **⚔️ Combat Partner** - Auto-equips weapons and fights by your side
 - **💀 Knockout System** - Falls unconscious at 0 HP, respawns after 20 seconds
+- **👁️ Mob Awareness** - Reacts to nearby hostile and neutral mobs
+- **🔄 Response Cleaning** - Removes AI artifacts and formatting tags
+- **⏸️ Pause Menu Integration** - Access AI settings directly from game menu
 
 ### ❤️ Original Features (CC0 Licensed - UltimateGamerMC)
 
@@ -61,6 +64,7 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **Multiple Providers** - Choose your preferred AI service (cloud or local)
 - **Customizable Personality** - Edit the system prompt to change her behavior
 - **Local Option** - Run AI completely offline with KoboldCpp
+- **Clean Responses** - Automatic removal of AI artifacts and formatting tags
 
 ## 🚀 Getting Started
 
@@ -92,15 +96,25 @@ Pattern:
 
 ### AI Configuration
 
-Press `G` to open the AI configuration screen to set up your API keys and preferences, or edit `girlfriend-mod.json` manually:
+**Method 1: Pause Menu (Recommended)**
+1. Press `ESC` to open the pause menu
+2. Click "Girlfriend AI Settings"
+3. Configure your preferred AI provider and settings
+4. Click "Save & Exit"
+
+**Method 2: Keybind**
+Press `G` to open the AI configuration screen
+
+**Method 3: Manual Config**
+Edit `girlfriend-mod.json` in your config folder:
 
 ```json
 {
   "aiProvider": "KOBOLDCPP",
   "chutesApiKey": "your-chutes-api-key",
-  "chutesModelName": "Qwen/Qwen2.5-VL-72B-Instruct-TEE",
+  "chutesModelName": "deepseek-ai/DeepSeek-V3-0324-TEE",
   "openRouterApiKey": "your-openrouter-api-key",
-  "openRouterModelName": "anthropic/claude-sonnet-4-20250514",
+  "openRouterModelName": "x-ai/grok-4.1-fast",
   "koboldCppUrl": "http://localhost:5001",
   "koboldCppModel": "kcpp",
   "koboldCppUseChatCompletions": true,
@@ -151,12 +165,14 @@ Press `G` to open the AI configuration screen to set up your API keys and prefer
 | Feed | Right-click with food |
 | Give Item | Right-click with item (non-food) |
 | Toggle Follow/Wait | Sneak + Right-click |
-| Open AI Config | Press `G` |
+| Open AI Config | Press `G` or use Pause Menu |
+| Talk | Type in chat |
 
 ### Chat Interaction
 Simply type in chat to talk to her!
 - **Chat:** "How are you doing?"
 - **Request Items:** "Can I have that diamond?" or "Give me some food"
+- **General:** "What do you think about this place?"
 
 ## 💬 Commands
 
@@ -203,7 +219,7 @@ Create a resource pack with the following structure:
 
 Then:
 1. Add the resource pack to your Minecraft client
-2. Open AI Config (press `G`)
+2. Open AI Config (press `G` or use Pause Menu)
 3. Set "Skin Texture Path" to: `girlfriend-mod:textures/entity/girlfriend.png`
 4. Save and restart if needed
 
@@ -225,8 +241,9 @@ girlfriend-mod/
 │   │   ├── AIClientManager.java     # Unified AI client router
 │   │   ├── ChutesClient.java        # Chutes AI API integration
 │   │   ├── OpenRouterClient.java    # OpenRouter API integration
-│   │   ├── KoboldCppClient.java     # KoboldCpp API integration (NEW)
-│   │   └── ConversationManager.java # Memory system
+│   │   ├── KoboldCppClient.java     # KoboldCpp API integration
+│   │   ├── ConversationManager.java # Memory system
+│   │   └── ResponseCleaner.java     # AI response cleaning utility
 │   ├── entity/
 │   │   └── GirlFriendEntity.java    # Core entity
 │   ├── registry/
@@ -240,7 +257,7 @@ girlfriend-mod/
 │   │   ├── EntityInteractionHandler.java
 │   │   └── ItemUseHandler.java
 │   ├── event/
-│   │   ├── ChatEventHandler.java    # Chat message handler (NEW)
+│   │   ├── ChatEventHandler.java    # Chat message handler
 │   │   └── EntityAttributeHandler.java
 │   ├── gui/
 │   │   └── AIConfigScreen.java      # Config GUI with provider selection
@@ -249,7 +266,8 @@ girlfriend-mod/
 │   ├── network/
 │   │   └── ModNetwork.java          # Sync config/memory
 │   └── client/
-│       ├── KeyInputHandler.java
+│       ├── KeyInputHandler.java     # Keybind handler (optional)
+│       ├── PauseMenuIntegration.java # Pause menu integration
 │       └── render/
 │           └── GirlFriendEntityRenderer.java  # Custom skin rendering
 └── src/main/resources/

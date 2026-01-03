@@ -22,16 +22,22 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 - **Memory System** - Remembers your conversations across sessions
 - **Customizable Personality** - Edit system prompt for different behavior
 - **Context Awareness** - Knows time of day, health status, inventory contents
+- **Response Cleaning** - Removes AI artifacts and formatting tags
 
 ### Combat Features
 - **Auto-Weapon Selection** - Automatically equips best weapon (sword or bow)
 - **Ranged Combat** - Uses bow with arrows from inventory
 - **Owner Defense** - Attacks entities threatening the owner
 - **Kill Reactions** - AI comments on defeating enemies
+- **Mob Awareness** - Reacts to nearby hostile and neutral mobs
 
 ### Custom Skins
 - **Resource Pack Support** - Create custom skins using standard Minecraft resource packs
 - **GUI Configuration** - Set texture path directly in the AI Config screen
+
+### Pause Menu Integration
+- **Easy Access** - Configure AI settings directly from game pause menu
+- **No Keybind Required** - Settings accessible via "Girlfriend AI Settings" button
 
 ### Commands
 - `/girlfriend summon <player>` - Summon a girlfriend
@@ -65,30 +71,31 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
 2. **Right-click** with the item to summon a girlfriend
 3. **Right-click** to feed her food or give her items
 4. **Sneak + Right-click** to toggle between follow and wait modes
-5. **Press G** to configure AI settings
-6. **Chat** with her by typing in standard Minecraft chat!
+5. **Press ESC** → "Girlfriend AI Settings" to configure AI
+6. **Press G** (optional) to open AI settings directly
+7. **Chat** with her by typing in standard Minecraft chat!
 
 ## AI Provider Setup
 
 ### Option 1: Chutes AI (Cloud)
 1. Get a free API key from [chutes.ai](https://chutes.ai)
-2. Open AI Config (press `G`)
+2. Open AI Config (ESC → "Girlfriend AI Settings")
 3. Select "Chutes AI" as provider
 4. Enter your API key
 5. Start chatting with your girlfriend!
 
 ### Option 2: OpenRouter (Cloud)
 1. Get an API key from [openrouter.ai](https://openrouter.ai)
-2. Open AI Config (press `G`)
+2. Open AI Config (ESC → "Girlfriend AI Settings")
 3. Select "OpenRouter" as provider
 4. Enter your API key
-5. Choose your preferred model (e.g., claude-sonnet-4-20250514)
+5. Choose your preferred model (e.g., x-ai/grok-4.1-fast)
 6. Start chatting with your girlfriend!
 
 ### Option 3: KoboldCpp (Local)
 1. Download [KoboldCpp](https://github.com/LostRuins/koboldcpp)
 2. Run KoboldCpp and load a GGUF model
-3. Open AI Config (press `G`)
+3. Open AI Config (ESC → "Girlfriend AI Settings")
 4. Select "KoboldCpp (Local)" as provider
 5. Set URL to `http://localhost:5001` (or your custom port)
 6. Choose API format (OpenAI Chat recommended)
@@ -111,7 +118,7 @@ An interactive Minecraft mod that adds a customizable girlfriend entity companio
    ```
 3. Add your skin texture at: `assets/girlfriend-mod/textures/entity/girlfriend.png`
 4. Add the pack to Minecraft via the Resource Pack menu
-5. Open AI Config (press G) and set "Skin Texture Path" to: `girlfriend-mod:textures/entity/girlfriend.png`
+5. Open AI Config (ESC → "Girlfriend AI Settings") and set "Skin Texture Path" to: `girlfriend-mod:textures/entity/girlfriend.png`
 
 ### Alternative Skin Paths
 
@@ -129,6 +136,9 @@ You can use various texture path formats:
 - **AI Providers**: Chutes AI (cloud), OpenRouter (cloud), KoboldCpp (local)
 - **Skin Support**: Resource pack based with GUI configuration
 - **Combat**: Auto-weapon selection, bow combat, owner defense
+- **Mob Awareness**: Reacts to nearby hostile and neutral mobs
+- **Response Cleaning**: Automatic removal of AI artifacts
+- **Pause Menu**: Access settings without keybinds
 
 ## License
 

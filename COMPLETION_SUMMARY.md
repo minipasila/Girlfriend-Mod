@@ -40,6 +40,18 @@ Added support for multiple AI providers:
 - OpenRouter integration (new)
 - KoboldCpp integration (new) - Local AI support
 
+### 5. Response Cleaning System ✅
+Added comprehensive response cleaning to remove AI artifacts and formatting tags from various providers
+
+### 6. Custom Skin Rendering ✅
+Fixed texture path handling for custom skins via resource packs
+
+### 7. Combat System Integration ✅
+Added auto-weapon selection, bow combat, and owner defense mechanics
+
+### 8. Knockout/Respawn System ✅
+Implemented unconscious state at 0 HP with 20-second respawn timer
+
 ---
 
 ## Implemented Features
@@ -52,7 +64,7 @@ Added support for multiple AI providers:
 - ✅ Customizable player name support
 - ✅ Owner UUID persistence across sessions
 - ✅ **Inventory System**: 36-slot inventory for holding items
-- ✅ **Knockout/Respawn System**: Falls unconscious at 0 HP, respawns after 20 seconds
+- ✅ **Knockout/Respawn System**: Falls unconscious at 0 HP, respawns after 20 seconds with invulnerability
 
 ### Interaction & Feeding
 - ✅ Right-click feeding system with 15+ food types
@@ -60,6 +72,7 @@ Added support for multiple AI providers:
 - ✅ Relationship bonuses for different foods
 - ✅ Health restoration based on food quality
 - ✅ **Auto-Eating**: Automatically consumes food from inventory when health is low
+- ✅ **Gift System**: Right-click with any non-food item to store in her inventory
 
 ### Combat System
 - ✅ **Auto-Weapon Selection**: Automatically equips best weapon (sword or bow)
@@ -67,6 +80,7 @@ Added support for multiple AI providers:
 - ✅ **Melee Combat**: Uses sword when available
 - ✅ **Owner Defense**: Attacks entities threatening the owner
 - ✅ **Kill Reactions**: AI comments when defeating enemies
+- ✅ **Mob Awareness**: Reacts to nearby hostile and neutral mobs
 
 ### Dialogue & Affection (AI-Powered)
 - ✅ **AI-Powered Dynamic Conversations**
@@ -78,8 +92,9 @@ Added support for multiple AI providers:
 - ✅ **Time Awareness**: Comments on day/night transitions
 - ✅ **Kill Reactions**: Reacts to defeating enemies
 - ✅ **Owner Death/Respawn**: Reacts when owner dies and respawns
+- ✅ **Mob Awareness**: Comments on nearby mobs (33% chance per check)
 
-### Inventory & Item Logic (New)
+### Inventory & Item Logic (Enhanced)
 - ✅ **Automatic Item Pickup**: Automatically picks up nearby dropped items
 - ✅ **Gift Receiving**: Player can give any item for her to hold (stored in inventory)
 - ✅ **Intelligent Item Requests**:
@@ -87,6 +102,7 @@ Added support for multiple AI providers:
   - AI analyzes intent and checks inventory
   - Entity tosses the requested item to the player if available
 - ✅ **Inventory Management**: Drops useless items when full (AI-assisted decisions)
+- ✅ **Auto-Eating from Inventory**: Consumes food when health is low
 
 ### Commands
 - ✅ `/girlfriend summon <player>` - Summon a girlfriend
@@ -104,6 +120,11 @@ Added support for multiple AI providers:
   - OpenRouter API integration
   - KoboldCpp integration for local/offline AI
   - Provider selection via GUI and config file
+
+- ✅ **Response Cleaning System**
+  - Removes AI artifacts, tags, and formatting
+  - Supports multiple AI provider formats
+  - Preserves natural dialogue flow
 
 - ✅ **Conversation Memory**
   - Persistent conversation history
@@ -126,6 +147,11 @@ Added support for multiple AI providers:
   - Custom skins via resource packs
   - Configurable texture path via GUI
   - Supports standard Minecraft resource pack format
+  - Fixed texture path handling for player skin rendering
+
+### Pause Menu Integration
+- ✅ **In-Game Configuration**: Access AI settings from pause menu
+- ✅ **No Keybind Required**: Settings accessible via "Girlfriend AI Settings" button
 
 ---
 
@@ -136,7 +162,7 @@ Added support for multiple AI providers:
 {
   "aiProvider": "CHUTES",
   "chutesApiKey": "your-api-key",
-  "chutesModelName": "Qwen/Qwen2.5-VL-72B-Instruct-TEE"
+  "chutesModelName": "deepseek-ai/DeepSeek-V3-0324-TEE"
 }
 ```
 Get API key: https://chutes.ai
@@ -146,7 +172,7 @@ Get API key: https://chutes.ai
 {
   "aiProvider": "OPENROUTER",
   "openRouterApiKey": "your-api-key",
-  "openRouterModelName": "anthropic/claude-sonnet-4-20250514"
+  "openRouterModelName": "x-ai/grok-4.1-fast"
 }
 ```
 Get API key: https://openrouter.ai
@@ -174,23 +200,22 @@ Download: https://github.com/LostRuins/koboldcpp
 ## Recent Changes (v2.0.X)
 
 ### New Features
-- **Inventory System**: Replaced random gift spawning with a real inventory system.
-- **Item Interaction**: Entity now picks up items and players can ask for them back via chat.
-- **Improved AI Logic**: Added "Intent Analysis" to detect when players are asking for items.
-- **KoboldCpp Support**: Full local AI support.
-- **OpenRouter Support**: Access to Claude, GPT, and other models.
-- **Custom Skin Support**: Resource pack-based custom skin support with GUI configuration.
-- **Combat System**: Auto-equip weapons and use bows.
-- **Knockout System**: Entity can be knocked out and respawns.
-- **Dismiss Commands**: Added options to dismiss girlfriends.
-- **Client Config GUI**: Press 'G' to configure AI settings.
+- **Response Cleaning**: Comprehensive system to remove AI artifacts and formatting tags
+- **Pause Menu Integration**: Access AI settings directly from game pause menu
+- **Mob Awareness System**: Entity reacts to nearby mobs with contextual comments
+- **Enhanced Combat**: Improved weapon selection and combat behavior
+- **Fixed Skin Rendering**: Correct texture path handling for custom skins
+- **Improved Inventory Logic**: Better item pickup and management
+- **Enhanced AI Context**: More detailed environmental awareness
 
 ### Bug Fixes
-- Fixed item spawning/creation logic.
-- Fixed null pointer exceptions in AI client handling.
-- Fixed GUI widget visibility toggling.
-- Fixed owner persistence across sessions.
-- Fixed NBT data serialization/deserialization.
+- Fixed item spawning/creation logic
+- Fixed null pointer exceptions in AI client handling
+- Fixed GUI widget visibility toggling
+- Fixed owner persistence across sessions
+- Fixed NBT data serialization/deserialization
+- Fixed texture path handling for custom skins
+- Fixed response cleaning for various AI provider formats
 
 ---
 
@@ -204,8 +229,9 @@ src/main/java/com/beckytidus/girlfriendmod/
 │   ├── AIClientManager.java              # Unified AI client router
 │   ├── ChutesClient.java                 # Chutes AI API integration
 │   ├── OpenRouterClient.java             # OpenRouter API integration
-│   ├── KoboldCppClient.java              # KoboldCpp API integration (NEW)
-│   └── ConversationManager.java          # Memory system
+│   ├── KoboldCppClient.java              # KoboldCpp API integration
+│   ├── ConversationManager.java          # Memory system
+│   └── ResponseCleaner.java              # AI response cleaning utility
 ├── entity/
 │   └── GirlFriendEntity.java             # Core entity implementation
 ├── registry/
@@ -219,16 +245,17 @@ src/main/java/com/beckytidus/girlfriendmod/
 │   ├── EntityInteractionHandler.java     # Entity interaction system
 │   └── ItemUseHandler.java               # Item use handler
 ├── event/
-│   ├── ChatEventHandler.java             # Chat message handler (NEW)
+│   ├── ChatEventHandler.java             # Chat message handler
 │   └── EntityAttributeHandler.java       # Attribute setup
 ├── gui/
-│   └── AIConfigScreen.java               # Config GUI with provider selection (NEW)
+│   └── AIConfigScreen.java               # Config GUI with provider selection
 ├── config/
 │   └── ModConfig.java                    # Config with AI provider support
 ├── network/
-│   └── ModNetwork.java                   # Sync config/memory (NEW)
+│   └── ModNetwork.java                   # Sync config/memory
 └── client/
-    ├── KeyInputHandler.java              # Keybind handler (NEW)
+    ├── KeyInputHandler.java              # Keybind handler (optional 'G' key)
+    ├── PauseMenuIntegration.java         # Pause menu integration
     └── render/
         └── GirlFriendEntityRenderer.java # Custom skin rendering
 
@@ -241,7 +268,7 @@ src/main/resources/
 │   │   ├── item/girlfriend_summoner.png
 │   │   └── entity/girlfriend.png
 │   ├── models/item/girlfriend_summoner.json
-│   ├── system-prompt.txt                 # AI personality (NEW)
+│   ├── system-prompt.txt                 # AI personality
 │   └── icon.png
 └── data/girlfriend-mod/recipes/
     └── girlfriend_summoner.json          # Crafting recipe

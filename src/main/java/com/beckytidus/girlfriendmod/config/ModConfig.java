@@ -39,7 +39,7 @@ public class ModConfig {
 
     // OpenRouter settings
     public String openRouterApiKey = "";
-    public String openRouterModelName = "moonshotai/kimi-k2-0905";
+    public String openRouterModelName = "x-ai/grok-4.1-fast";
 
     // KoboldCpp settings
     public String koboldCppUrl = "http://localhost:5001";

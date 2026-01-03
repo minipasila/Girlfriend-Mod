@@ -13,5 +13,7 @@
   "config.girlfriend-mod.provider.koboldcpp": "KoboldCpp (Local)",
   "config.girlfriend-mod.koboldcpp_url": "KoboldCpp URL",
   "config.girlfriend-mod.koboldcpp_model": "KoboldCpp Model",
-  "config.girlfriend-mod.koboldcpp_format": "API Format"
+  "config.girlfriend-mod.koboldcpp_format": "API Format",
+  "key.girlfriend-mod.config": "Open AI Config",
+  "text.girlfriend-mod.pause_menu": "Girlfriend AI Settings"
 }

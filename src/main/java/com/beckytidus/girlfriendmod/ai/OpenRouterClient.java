@@ -1,6 +1,7 @@
 package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
+import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -28,7 +29,7 @@ public class OpenRouterClient {
             .build();
     private static final Gson gson = new Gson();
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-openrouter");
-    
+
     public static String loadSystemPrompt(String name, String systemContext) {
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
@@ -49,7 +50,7 @@ public class OpenRouterClient {
 
         return buildDefaultPrompt(name, systemContext);
     }
-    
+
     private static String buildDefaultPrompt(String name, String systemContext) {
         return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
                 "## CORE LINGUISTIC CONSTRAINTS\n" +
@@ -70,11 +71,12 @@ public class OpenRouterClient {
                 "## IMPORTANT INFORMATION\n" +
                 "- When your owner gives you an item you cannot give anything back at that moment.\n" +
                 "- Do not say you're eating something, wait for context to tell you that you ate something then you can say that.\n" +
-                "- Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.\n\n" +
+                "- Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.\n" +
+                "- Take into account the current context/events that JUST HAPPENED.\n\n" +
                 "be a supportive, slightly clunky, and adorable companion. every response must be a single message.\n\n" +
                 "current environment data: " + systemContext;
     }
-    
+
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
         ModConfig config = ModConfig.get();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
@@ -85,37 +87,37 @@ public class OpenRouterClient {
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
         ModConfig config = ModConfig.get();
         String apiKey = config.getActiveApiKey();
-        
+
         if (apiKey == null || apiKey.isEmpty()) {
             return CompletableFuture.completedFuture("please set your api key in config... ^^");
         }
-        
+
         JsonObject body = new JsonObject();
         body.addProperty("model", config.getActiveModelName());
         body.addProperty("stream", false);
         body.addProperty("max_tokens", 1024);
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
-        
+
         JsonArray messages = new JsonArray();
-        
+
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content", systemPrompt);
         messages.add(system);
-        
+
         for (ChatMessage msg : history) {
             JsonObject m = new JsonObject();
             m.addProperty("role", msg.role);
             m.addProperty("content", msg.content);
             messages.add(m);
         }
-        
+
         body.add("messages", messages);
-        
+
         String requestJson = gson.toJson(body);
         LOGGER.info("[AI Debug] OpenRouter Request: {}", requestJson);
-        
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL))
                 .header("Authorization", "Bearer " + apiKey)
@@ -124,12 +126,12 @@ public class OpenRouterClient {
                 .header("X-Title", "Girlfriend Mod")
                 .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
-        
+
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
                     String responseBody = response.body();
                     LOGGER.info("[AI Debug] OpenRouter Response ({}): {}", response.statusCode(), responseBody);
-                    
+
                     if (response.statusCode() != 200) {
                         return "error: " + response.statusCode() + "... sorry >.<";
                     }
@@ -137,34 +139,38 @@ public class OpenRouterClient {
                         JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
                         JsonObject choice = json.getAsJsonArray("choices").get(0).getAsJsonObject();
                         JsonObject message = choice.get("message").getAsJsonObject();
-                        
+
                         String content = "";
                         if (message.has("content") && !message.get("content").isJsonNull()) {
                             content = message.get("content").getAsString();
                         }
-                        
+
                         if (content == null || content.trim().isEmpty()) {
                             return "...";
                         }
-                        
-                        return content;
+
+                        // NEW: Clean the response
+                        String cleanedContent = ResponseCleaner.cleanResponse(content);
+                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
+
+                        return cleanedContent;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing OpenRouter response", e);
                         return "error parsing response... " + e.getMessage();
                     }
                 });
     }
-    
+
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
         return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.");
     }
-    
+
     public static class ChatMessage {
         public String role;
         public String content;
-        
+
         public ChatMessage(String role, String content) {
             this.role = role;
             this.content = content;
