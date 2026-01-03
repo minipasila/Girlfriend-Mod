@@ -75,8 +75,6 @@ public class EntityInteractionHandler {
                     name = "Girlfriend";
                 }
                 String itemName = stackCopy.getName().getString();
-                String giftEvent = "Player gave " + name + " " + itemName + " (accepted)";
-                girlfriend.getMemory().addMessage("system", giftEvent);
 
                 girlfriend.reactToItem(player, stackCopy, true);
                 return ActionResult.SUCCESS;
@@ -90,8 +88,6 @@ public class EntityInteractionHandler {
                     name = "Girlfriend";
                 }
                 String itemName = stackCopy.getName().getString();
-                String giftEvent = "Player gave " + name + " " + itemName + " (inventory full)";
-                girlfriend.getMemory().addMessage("system", giftEvent);
 
                 girlfriend.reactToItem(player, stackCopy, false);
                 return ActionResult.SUCCESS;

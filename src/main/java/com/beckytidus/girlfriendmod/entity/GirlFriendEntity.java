@@ -1382,8 +1382,8 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         String itemName = stack.getName().getString();
         String name = getNameForContext();
 
-        // Add gift event to history
-        String giftEvent = "Player gave " + name + " " + itemName + (wasAddedToInventory ? " (accepted)" : " (inventory full)");
+        // Add gift event to history - use consistent format
+        String giftEvent = "Player gave " + name + " " + itemName + " " + (wasAddedToInventory ? "(accepted)" : "(inventory full)");
         getMemory().addMessage("system", giftEvent);
 
         if (isGeneratingResponse || System.currentTimeMillis() - lastPhraseTime < SPEECH_COOLDOWN) return;
