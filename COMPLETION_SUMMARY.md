@@ -52,19 +52,35 @@ Added auto-weapon selection, bow combat, and owner defense mechanics
 ### 8. Knockout/Respawn System ✅
 Implemented unconscious state at 0 HP with 20-second respawn timer
 
+### 9. Mob Awareness System ✅
+Added contextual reactions to nearby hostile and neutral mobs (33% chance per check)
+
+### 10. Pause Menu Integration ✅
+Added direct access to AI settings from game pause menu (no keybind required)
+
+### 11. Relationship Manager Enhancement ✅
+Fixed recursive relationship level setting that caused stack overflow
+
+### 12. Player Kill Events ✅
+Added event handling for when player kills mobs (girlfriend reacts to owner's kills)
+
+### 13. Auto-Heal Owner System ✅
+Added relationship-based auto-healing of owner when health is low
+
 ---
 
 ## Implemented Features
 
 ### Core Entity System
 - ✅ GirlFriendEntity class with custom health system (40 HP max)
-- ✅ Relationship level tracking (0-100)
+- ✅ Relationship level tracking (0-100) with milestone bonuses
 - ✅ Auto-healing when below 70% health
 - ✅ Following behavior with intelligent distance management (2-16 block range)
 - ✅ Customizable player name support
 - ✅ Owner UUID persistence across sessions
 - ✅ **Inventory System**: 36-slot inventory for holding items
 - ✅ **Knockout/Respawn System**: Falls unconscious at 0 HP, respawns after 20 seconds with invulnerability
+- ✅ **Mob Awareness**: Reacts to nearby hostile and neutral mobs with contextual comments
 
 ### Interaction & Feeding
 - ✅ Right-click feeding system with 15+ food types
@@ -73,6 +89,7 @@ Implemented unconscious state at 0 HP with 20-second respawn timer
 - ✅ Health restoration based on food quality
 - ✅ **Auto-Eating**: Automatically consumes food from inventory when health is low
 - ✅ **Gift System**: Right-click with any non-food item to store in her inventory
+- ✅ **Item Pickup**: Automatically picks up nearby dropped items
 
 ### Combat System
 - ✅ **Auto-Weapon Selection**: Automatically equips best weapon (sword or bow)
@@ -80,7 +97,12 @@ Implemented unconscious state at 0 HP with 20-second respawn timer
 - ✅ **Melee Combat**: Uses sword when available
 - ✅ **Owner Defense**: Attacks entities threatening the owner
 - ✅ **Kill Reactions**: AI comments when defeating enemies
-- ✅ **Mob Awareness**: Reacts to nearby hostile and neutral mobs
+- ✅ **Relationship-Based Combat Bonuses**:
+  - Damage multiplier (up to 1.25x at level 90+)
+  - Healing multiplier (up to 1.5x at level 90+)
+  - Damage reduction (up to 25% at level 90+)
+- ✅ **Forgiveness System**: High relationship (>20) forgives accidental hits from owner
+- ✅ **Sacrifice System**: High relationship (>80) will take damage for owner
 
 ### Dialogue & Affection (AI-Powered)
 - ✅ **AI-Powered Dynamic Conversations**
@@ -103,6 +125,7 @@ Implemented unconscious state at 0 HP with 20-second respawn timer
   - Entity tosses the requested item to the player if available
 - ✅ **Inventory Management**: Drops useless items when full (AI-assisted decisions)
 - ✅ **Auto-Eating from Inventory**: Consumes food when health is low
+- ✅ **Auto-Heal Owner**: Uses golden apples from inventory to heal owner when relationship >40
 
 ### Commands
 - ✅ `/girlfriend summon <player>` - Summon a girlfriend
@@ -125,6 +148,7 @@ Implemented unconscious state at 0 HP with 20-second respawn timer
   - Removes AI artifacts, tags, and formatting
   - Supports multiple AI provider formats
   - Preserves natural dialogue flow
+  - Separate methods for chat vs JSON responses
 
 - ✅ **Conversation Memory**
   - Persistent conversation history
@@ -132,7 +156,7 @@ Implemented unconscious state at 0 HP with 20-second respawn timer
   - Memory persistence across sessions
 
 - ✅ **Configuration**
-  - Client-side AI configuration GUI (Press 'G')
+  - Client-side AI configuration GUI (Press 'G' or Pause Menu)
   - Real-time config sync between client and server
   - Memory clear functionality
   - Configurable temperature, minP, max history tokens
@@ -152,6 +176,7 @@ Implemented unconscious state at 0 HP with 20-second respawn timer
 ### Pause Menu Integration
 - ✅ **In-Game Configuration**: Access AI settings from pause menu
 - ✅ **No Keybind Required**: Settings accessible via "Girlfriend AI Settings" button
+- ✅ **Scrollable Interface**: Handles many configuration options
 
 ---
 
@@ -207,6 +232,9 @@ Download: https://github.com/LostRuins/koboldcpp
 - **Fixed Skin Rendering**: Correct texture path handling for custom skins
 - **Improved Inventory Logic**: Better item pickup and management
 - **Enhanced AI Context**: More detailed environmental awareness
+- **Relationship Manager**: Adds a new sentiment analysis feature and bonus system
+- **Player Kill Events**: Girlfriend now reacts when owner kills mobs
+- **Auto-Heal Owner**: High relationship (>40) enables auto-healing of owner with golden apples
 
 ### Bug Fixes
 - Fixed item spawning/creation logic
@@ -216,6 +244,8 @@ Download: https://github.com/LostRuins/koboldcpp
 - Fixed NBT data serialization/deserialization
 - Fixed texture path handling for custom skins
 - Fixed response cleaning for various AI provider formats
+- Fixed recursive relationship level updates causing stack overflow
+- Fixed combat target monitoring for kill reactions
 
 ---
 
@@ -231,6 +261,7 @@ src/main/java/com/beckytidus/girlfriendmod/
 │   ├── OpenRouterClient.java             # OpenRouter API integration
 │   ├── KoboldCppClient.java              # KoboldCpp API integration
 │   ├── ConversationManager.java          # Memory system
+│   ├── RelationshipManager.java          # Relationship logic and sentiment analysis
 │   └── ResponseCleaner.java              # AI response cleaning utility
 ├── entity/
 │   └── GirlFriendEntity.java             # Core entity implementation

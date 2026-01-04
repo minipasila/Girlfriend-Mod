@@ -2,13 +2,13 @@ package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
+// ... imports ...
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class KoboldCppClient {
+    // ... fields ...
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
             .build();
@@ -34,10 +35,14 @@ public class KoboldCppClient {
         ModConfig config = ModConfig.get();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
         String prompt = loadSystemPrompt(name, systemContext);
-        return generateRaw(history, prompt);
+        
+        // CLEAN for chat
+        return generateRaw(history, prompt)
+                .thenApply(ResponseCleaner::cleanResponse);
     }
 
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
+        // ... existing method ...
         ModConfig config = ModConfig.get();
         String baseUrl = config.koboldCppUrl;
 
@@ -59,6 +64,7 @@ public class KoboldCppClient {
     private static CompletableFuture<String> generateViaChatCompletions(String baseUrl, List<ChatMessage> history, String systemPrompt) {
         ModConfig config = ModConfig.get();
 
+        // ... request construction ...
         JsonObject body = new JsonObject();
         body.addProperty("model", config.koboldCppModel);
         body.addProperty("stream", false);
@@ -67,7 +73,6 @@ public class KoboldCppClient {
         body.addProperty("min_p", config.minP);
 
         JsonArray messages = new JsonArray();
-
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content", systemPrompt);
@@ -79,11 +84,9 @@ public class KoboldCppClient {
             m.addProperty("content", msg.content);
             messages.add(m);
         }
-
         body.add("messages", messages);
 
         String url = baseUrl + "/v1/chat/completions";
-
         String requestJson = gson.toJson(body);
         LOGGER.info("[AI Debug] KoboldCpp (Chat) Request: {}", requestJson);
 
@@ -95,6 +98,7 @@ public class KoboldCppClient {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(response -> {
+                    // ... response handling ...
                     String responseBody = response.body();
                     LOGGER.info("[AI Debug] KoboldCpp Response ({}): {}", response.statusCode(), responseBody);
 
@@ -116,11 +120,8 @@ public class KoboldCppClient {
                             return "...";
                         }
 
-                        // NEW: Clean the response
-                        String cleanedContent = ResponseCleaner.cleanResponse(content);
-                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
-
-                        return cleanedContent;
+                        // DO NOT CLEAN HERE. Return raw.
+                        return content;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing KoboldCpp response", e);
                         return "error parsing response... " + e.getMessage();
@@ -129,13 +130,13 @@ public class KoboldCppClient {
     }
 
     private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemPrompt) {
+        // ... similar logic, removing cleanResponse ...
         ModConfig config = ModConfig.get();
-
         StringBuilder promptBuilder = new StringBuilder();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
 
         promptBuilder.append(systemPrompt).append("\n\n");
-
+        // ... build prompt ...
         for (ChatMessage msg : history) {
             String role = msg.role.equals("user") ? "User" :
                          msg.role.equals("assistant") ? name :
@@ -143,9 +144,7 @@ public class KoboldCppClient {
             promptBuilder.append("<|").append(role).append("|>\n");
             promptBuilder.append(msg.content).append("\n");
         }
-
         promptBuilder.append("<|").append(name.toUpperCase()).append("|>\n");
-
         String prompt = promptBuilder.toString();
 
         JsonObject body = new JsonObject();
@@ -154,7 +153,7 @@ public class KoboldCppClient {
         body.addProperty("max_context_length", config.maxHistoryTokens);
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
-
+        
         JsonArray stopSequences = new JsonArray();
         stopSequences.add("<|USER|>");
         stopSequences.add("<|SYSTEM|>");
@@ -162,7 +161,6 @@ public class KoboldCppClient {
         body.add("stop_sequence", stopSequences);
 
         String url = baseUrl + "/api/v1/generate";
-
         String requestJson = gson.toJson(body);
         LOGGER.info("[AI Debug] KoboldCpp (Native) Request: {}", requestJson);
 
@@ -192,11 +190,8 @@ public class KoboldCppClient {
                             return "...";
                         }
 
-                        // NEW: Clean the response
-                        String cleanedContent = ResponseCleaner.cleanResponse(text);
-                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
-
-                        return cleanedContent;
+                        // DO NOT CLEAN HERE. Return raw (but with Kobold specific artifacts removed by cleanKoboldResponse is fine)
+                        return text;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing KoboldCpp response", e);
                         return "error parsing response... " + e.getMessage();
@@ -205,6 +200,7 @@ public class KoboldCppClient {
     }
 
     private static String cleanKoboldResponse(String text) {
+        // ... existing method ...
         String[] stopSequences = {"<|USER|>", "<|SYSTEM|>", "<|", "\n<|"};
         for (String stop : stopSequences) {
             int idx = text.indexOf(stop);
@@ -218,9 +214,12 @@ public class KoboldCppClient {
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
-        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.");
+        // Summaries are text, so we clean them
+        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.")
+                .thenApply(ResponseCleaner::cleanResponse);
     }
-
+    
+    // ... rest of file ...
     public static CompletableFuture<Boolean> checkServerAvailable(String url) {
         if (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);

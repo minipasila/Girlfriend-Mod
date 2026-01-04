@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class ChutesClient {
+    // ... existing fields ...
     private static final String API_URL = "https://llm.chutes.ai/v1/chat/completions";
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -31,6 +32,7 @@ public class ChutesClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod");
 
     public static String loadSystemPrompt(String name, String systemContext) {
+        // ... existing method ...
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
 
@@ -52,6 +54,7 @@ public class ChutesClient {
     }
 
     private static String buildDefaultPrompt(String name, String systemContext) {
+        // ... existing method ...
         return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
                 "## CORE LINGUISTIC CONSTRAINTS\n" +
                 "1. STRICT LOWERCASE: you are incapable of using capital letters. always write in all-lowercase.\n" +
@@ -81,7 +84,10 @@ public class ChutesClient {
         ModConfig config = ModConfig.get();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
         String prompt = loadSystemPrompt(name, systemContext);
-        return generateRaw(history, prompt);
+        
+        // CLEAN the response here for chat interactions
+        return generateRaw(history, prompt)
+                .thenApply(ResponseCleaner::cleanResponse);
     }
 
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
@@ -91,6 +97,7 @@ public class ChutesClient {
             return CompletableFuture.completedFuture("please set your api key in config... ^^");
         }
 
+        // ... request construction ...
         JsonObject body = new JsonObject();
         body.addProperty("model", config.chutesModelName);
         body.addProperty("stream", false);
@@ -99,7 +106,6 @@ public class ChutesClient {
         body.addProperty("min_p", config.minP);
 
         JsonArray messages = new JsonArray();
-
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content", systemPrompt);
@@ -147,11 +153,8 @@ public class ChutesClient {
                             return "...";
                         }
 
-                        // NEW: Clean the response
-                        String cleanedContent = ResponseCleaner.cleanResponse(content);
-                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
-
-                        return cleanedContent;
+                        // DO NOT CLEAN HERE. Return raw content for Logic/JSON processing.
+                        return content;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing Chutes response", e);
                         return "error parsing response... " + e.getMessage();
@@ -162,7 +165,9 @@ public class ChutesClient {
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
-        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.");
+        // Summaries are text, so we clean them
+        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.")
+                .thenApply(ResponseCleaner::cleanResponse);
     }
 
     public static class ChatMessage {

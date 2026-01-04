@@ -3,6 +3,7 @@ package com.beckytidus.girlfriendmod.entity;
 import com.beckytidus.girlfriendmod.ai.AIClientManager;
 import com.beckytidus.girlfriendmod.ai.ChutesClient;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
+import com.beckytidus.girlfriendmod.ai.RelationshipManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -95,6 +96,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
 
     // AI Components
     private ConversationManager conversationManager;
+    private RelationshipManager relationshipManager;
     private String gameContext = "Standing idly.";
 
     // Combat State
@@ -119,6 +121,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
 
         this.inventory.addListener(inv -> {});
         this.setCanPickUpLoot(false);
+        this.relationshipManager = new RelationshipManager(this);
     }
 
     @Override
@@ -171,6 +174,10 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         }
 
         this.readInventory(nbt);
+
+        // Reinitialize relationship manager with loaded level
+        this.relationshipManager = new RelationshipManager(this);
+        this.relationshipManager.setRelationshipLevel(this.relationshipLevel);
     }
 
     public ConversationManager getMemory() {
@@ -178,6 +185,10 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             conversationManager = new ConversationManager(this.getUuid());
         }
         return conversationManager;
+    }
+
+    public RelationshipManager getRelationshipManager() {
+        return relationshipManager;
     }
 
     public static DefaultAttributeContainer.Builder createGirlfriendAttributes() {
@@ -222,9 +233,30 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         });
         this.goalSelector.add(6, new FollowOwnerGoal());
 
-        this.targetSelector.add(1, new RevengeGoal(this));
+        this.targetSelector.add(1, new ForgivingRevengeGoal());
         this.targetSelector.add(2, new OwnerSupportGoal());
         this.targetSelector.add(3, new ActiveTargetGoal<>(this, HostileEntity.class, true));
+    }
+
+    // Custom RevengeGoal that excludes owner if relationship is high enough
+    private class ForgivingRevengeGoal extends RevengeGoal {
+        public ForgivingRevengeGoal() {
+            super(GirlFriendEntity.this);
+        }
+
+        @Override
+        public boolean canStart() {
+            if (!super.canStart()) return false;
+
+            // Check if the attacker is the owner
+            LivingEntity attacker = GirlFriendEntity.this.getAttacker();
+            if (attacker == GirlFriendEntity.this.owner) {
+                // Owner attacked me - only retaliate if relationship is very low
+                return !relationshipManager.willForgiveAccidentalHits();
+            }
+
+            return true;
+        }
     }
 
     // --- Mob Awareness System ---
@@ -694,27 +726,90 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             return false;
         }
 
+        // Check if attacker is owner
+        Entity attacker = source.getAttacker();
+        if (attacker == this.owner) {
+            // Owner hit me - check relationship
+            if (relationshipManager.willForgiveAccidentalHits()) {
+                // Reduce damage from owner if relationship is good
+                amount *= (float) relationshipManager.getDamageReductionMultiplier();
+
+                // Only take partial damage
+                boolean damaged = super.damage(world, source, amount);
+
+                if (damaged) {
+                    // Use LLM to generate response instead of hardcoded message
+                    String name = getNameForContext();
+                    String context = name + " was accidentally hit by owner. " + name + " should express that it hurt but forgive them since it was an accident.";
+
+                    // Add to memory
+                    getMemory().addMessage("system", name + " was accidentally hit by owner. Taking reduced damage due to high relationship.");
+
+                    // Generate AI response
+                    if (!isGeneratingResponse && System.currentTimeMillis() - lastPhraseTime > SPEECH_COOLDOWN) {
+                        generateAndSayResponse(context);
+                    }
+                }
+                return damaged;
+            } else {
+                // Relationship is low - treat as hostile
+                this.setTarget((LivingEntity) attacker);
+
+                // Add to memory
+                String name = getNameForContext();
+                getMemory().addMessage("system", name + " was attacked by owner. Relationship is too low to forgive.");
+
+                // Generate AI response
+                if (!isGeneratingResponse && System.currentTimeMillis() - lastPhraseTime > SPEECH_COOLDOWN) {
+                    generateAndSayResponse(name + " was attacked by owner! Express hurt and betrayal.");
+                }
+            }
+        }
+
         if (this.getHealth() - amount <= 0) {
             startKnockoutProcess(source);
             return false;
         }
 
+        // Apply damage reduction based on relationship
+        amount *= (float) relationshipManager.getDamageReductionMultiplier();
+
         boolean damaged = super.damage(world, source, amount);
 
         if (damaged) {
-            if (source.getAttacker() != null) {
-                updateGameContext("Attacked by " + source.getAttacker().getName().getString());
+            if (attacker != null && attacker != this.owner) { // Only react to non-owner attacks
+                updateGameContext("Attacked by " + attacker.getName().getString());
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastDamageReactionTime > DAMAGE_REACTION_COOLDOWN) {
-                    triggerDamageReaction(source.getAttacker(), true);
+                    triggerDamageReaction(attacker, true);
                 }
             }
-            if (this.owner != null && source.getAttacker() instanceof PlayerEntity && source.getAttacker() != this.owner) {
+
+            if (this.owner != null && attacker instanceof PlayerEntity && attacker != this.owner) {
                 this.addRelationship(-5);
             }
         }
 
         return damaged;
+    }
+
+    @Override
+    public boolean tryAttack(ServerWorld world, Entity target) {
+        float damage = (float)this.getAttributeValue(EntityAttributes.ATTACK_DAMAGE);
+
+        // Apply relationship-based damage multiplier
+        damage *= (float) relationshipManager.getCombatDamageMultiplier();
+
+        // Store original damage to restore after attack
+        float originalDamage = (float)this.getAttributeValue(EntityAttributes.ATTACK_DAMAGE);
+        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(damage);
+
+        boolean attacked = super.tryAttack(world, target);
+
+        // Restore original damage value
+        this.getAttributeInstance(EntityAttributes.ATTACK_DAMAGE).setBaseValue(originalDamage);
+
+        return attacked;
     }
 
     private void startKnockoutProcess(DamageSource source) {
@@ -819,53 +914,10 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         if (isKnockedOut) return;
 
         getMemory().addMessage("user", msg);
-        List<ChutesClient.ChatMessage> recentHistory = getMemory().getRecentHistory(6);
-        AIClientManager.analyzeIntent(msg, recentHistory).thenAccept(isAskingForGift -> {
-            if (!isAskingForGift) {
-                generateAndSayResponse("User said: \"" + msg + "\"");
-                return;
-            }
-            handleGiftRequest(msg, recentHistory);
-        });
+        relationshipManager.processInteraction(msg, getMemory().getRecentHistory(6));
     }
 
-    private void handleGiftRequest(String userMessage, List<ChutesClient.ChatMessage> recentHistory) {
-        String name = getNameForContext();
-        List<String> itemNames = getItemNamesFromInventory();
-        if (itemNames.isEmpty()) {
-            generateAndSayResponse("The user asked for a gift, but " + name + "'s inventory is empty.");
-            return;
-        }
-
-        AIClientManager.selectItemFromInventory(itemNames, userMessage, recentHistory).thenAccept(decision -> {
-            World world = this.getEntityWorld();
-            if (world instanceof ServerWorld serverWorld) {
-                serverWorld.getServer().execute(() -> {
-                    String resultContext;
-                    if (decision.equalsIgnoreCase("MISSING")) {
-                        resultContext = "The user asked for a specific item, but " + name + " does not have it.";
-                    } else {
-                        GiveResult result = this.giveSpecificItem(decision);
-                        switch (result) {
-                            case SUCCESS -> {
-                                resultContext = name + " successfully gave the user " + name + "'s " + decision + ".";
-                                this.addRelationship(2);
-                            }
-                            case FULL -> {
-                                resultContext = name + " tried to give " + decision + " but the player's inventory is full. Inform them they need to make space.";
-                            }
-                            default -> {
-                                resultContext = name + " tried to give " + decision + " but failed/could not find it.";
-                            }
-                        }
-                    }
-                    generateAndSayResponse(resultContext);
-                });
-            }
-        });
-    }
-
-    private void generateAndSayResponse(String promptContext) {
+    public void generateAndSayResponse(String promptContext) {
         if (isGeneratingResponse) return;
         isGeneratingResponse = true;
 
@@ -946,7 +998,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         return sb.toString();
     }
 
-    private List<String> getItemNamesFromInventory() {
+    public List<String> getItemNamesFromInventory() {
         List<String> names = new ArrayList<>();
         for(int i=0; i<inventory.size(); i++) {
             ItemStack s = inventory.getStack(i);
@@ -1030,6 +1082,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 tickTimeAwareness();
                 tickCombatLogic();
                 tickMobAwareness(); // NEW: Add mob awareness check
+                tickAutoHealOwner(); // NEW: Auto-heal owner if relationship is high enough
             }
             if (this.age % 40 == 0) tickAutoEat();
             if (this.age % 100 == 0) tickInventoryManagement();
@@ -1064,11 +1117,53 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             }
 
             if (this.getHealth() < this.getMaxHealth() * 0.7 && currentTime - lastHealTime > 40000 && this.getTarget() == null) {
-                this.setHealth(Math.min(this.getHealth() + 5.0f, this.getMaxHealth()));
+                this.heal(5.0f);
                 lastHealTime = currentTime;
             }
 
             this.updateNameTag();
+        }
+    }
+
+    // NEW: Auto-heal owner if relationship is high enough
+    private void tickAutoHealOwner() {
+        if (!relationshipManager.willAutoHealOwner()) return;
+        if (this.owner == null) return;
+        if (this.isKnockedOut) return;
+
+        // Check if owner is hurt
+        if (this.owner.getHealth() < this.owner.getMaxHealth() * 0.7f &&
+            this.distanceTo(this.owner) < 10.0f) {
+
+            // Check if we have healing items
+            for (int i = 0; i < this.inventory.size(); i++) {
+                ItemStack stack = this.inventory.getStack(i);
+                if (stack.isEmpty()) continue;
+
+                // Check for healing items (golden apples, potions, etc.)
+                if (stack.isOf(Items.GOLDEN_APPLE) || stack.isOf(Items.ENCHANTED_GOLDEN_APPLE)) {
+                    // Use the item on owner
+                    float healAmount = 4.0f * (float) relationshipManager.getHealingMultiplier();
+                    this.owner.heal(healAmount);
+                    stack.decrement(1);
+                    if (stack.isEmpty()) {
+                        this.inventory.setStack(i, ItemStack.EMPTY);
+                    }
+
+                    // Add to memory
+                    getMemory().addMessage("system",
+                        getNameForContext() + " used a golden apple to heal owner for " + String.format("%.1f", healAmount) + " health.");
+
+                    // AI reaction
+                    if (ModConfig.get().enableAI && !isGeneratingResponse &&
+                        System.currentTimeMillis() - lastPhraseTime > SPEECH_COOLDOWN) {
+                        generateAndSayResponse(getNameForContext() +
+                            " just used a golden apple to heal " + getNameForContext() +
+                            "'s owner. Express concern and care.");
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -1176,7 +1271,11 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 // Handle golden apples separately since they're not standard food items
                 String itemName = stack.getName().getString();
                 String name = getNameForContext();
-                this.heal(5.0f); // Golden apples heal 5 HP
+
+                // Apply healing multiplier
+                float healAmount = 5.0f * (float) relationshipManager.getHealingMultiplier();
+                this.heal(healAmount);
+
                 this.playSound(SoundEvents.ENTITY_GENERIC_EAT.value(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
 
                 stack.decrement(1);
@@ -1187,7 +1286,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 this.lastHealTime = System.currentTimeMillis();
 
                 // Add eating event to chat history
-                getMemory().addMessage("system", name + " ate " + itemName + " from inventory to heal.");
+                getMemory().addMessage("system", name + " ate " + itemName + " from inventory to heal for " + String.format("%.1f", healAmount) + " health.");
 
                 // Chance to react to eating (30% chance)
                 if (ModConfig.get().enableAI && !isKnockedOut &&
@@ -1203,7 +1302,10 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     }
 
     private void eatFood(ItemStack stack, int slot, FoodComponent food) {
-        this.heal(food.nutrition());
+        // Apply healing multiplier
+        float healAmount = food.nutrition() * (float) relationshipManager.getHealingMultiplier();
+        this.heal(healAmount);
+
         this.playSound(SoundEvents.ENTITY_GENERIC_EAT.value(), 1.0f, 1.0f + (this.random.nextFloat() - this.random.nextFloat()) * 0.2f);
 
         // Get the item name before decrementing
@@ -1218,7 +1320,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         this.lastHealTime = System.currentTimeMillis();
 
         // NEW: Add eating event to chat history
-        getMemory().addMessage("system", name + " ate " + itemName + " from inventory to heal.");
+        getMemory().addMessage("system", name + " ate " + itemName + " from inventory to heal for " + String.format("%.1f", healAmount) + " health.");
 
         // NEW: Chance to react to eating (30% chance)
         if (ModConfig.get().enableAI && !isKnockedOut &&
@@ -1369,10 +1471,10 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     public void feedEntity(ItemStack stack) {
         if (isKnockedOut) return; // Can't eat when knocked out
         if (stack.isOf(Items.APPLE) || stack.isOf(Items.GOLDEN_APPLE)) {
-            this.setHealth(Math.min(this.getHealth() + 5.0f, this.getMaxHealth()));
+            this.heal(5.0f);
             this.addRelationship(5);
         } else {
-            this.setHealth(Math.min(this.getHealth() + 2.0f, this.getMaxHealth()));
+            this.heal(2.0f);
             this.addRelationship(2);
         }
     }
@@ -1399,10 +1501,39 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
 
     public void setRelationshipLevel(int level) {
         this.relationshipLevel = Math.min(Math.max(0, level), this.maxRelationshipLevel);
+        if (relationshipManager != null) {
+            relationshipManager.setRelationshipLevel(level);
+        }
     }
+
+    public int getRelationshipLevel() {
+        return this.relationshipLevel;
+    }
+
     public void addRelationship(int amount) {
-        this.setRelationshipLevel(this.relationshipLevel + amount);
+        this.relationshipLevel = Math.min(Math.max(0, this.relationshipLevel + amount), this.maxRelationshipLevel);
+        if (relationshipManager != null) {
+            relationshipManager.addRelationship(amount);
+        }
+
+        // Visual feedback
+        if (amount > 0 && owner != null) {
+            // Spawn heart particles for positive relationship
+            if (getEntityWorld() instanceof ServerWorld serverWorld) {
+                serverWorld.spawnParticles(net.minecraft.particle.ParticleTypes.HEART,
+                    this.getX(), this.getY() + 2, this.getZ(),
+                    3, 0.3, 0.3, 0.3, 0.1);
+            }
+        } else if (amount < 0 && owner != null) {
+            // Spawn angry particles for negative relationship
+            if (getEntityWorld() instanceof ServerWorld serverWorld) {
+                serverWorld.spawnParticles(net.minecraft.particle.ParticleTypes.ANGRY_VILLAGER,
+                    this.getX(), this.getY() + 2, this.getZ(),
+                    3, 0.3, 0.3, 0.3, 0.1);
+            }
+        }
     }
+
     public void setPlayerCustomName(String name) { this.playerCustomName = name; }
 
     public void toggle() {
@@ -1415,7 +1546,18 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     }
 
     // Helper method to get the name for context
-    private String getNameForContext() {
+    public String getNameForContext() {
         return this.playerCustomName.isEmpty() ? "Girlfriend" : this.playerCustomName;
+    }
+
+    // Helper method to heal with relationship multiplier
+    public void heal(float amount) {
+        amount *= (float) relationshipManager.getHealingMultiplier();
+        this.setHealth(Math.min(this.getHealth() + amount, this.getMaxHealth()));
+    }
+
+    // Helper method to check if should take damage for owner
+    public boolean shouldTakeDamageForOwner(float damageAmount) {
+        return relationshipManager.shouldTakeDamageForOwner(damageAmount);
     }
 }

@@ -31,6 +31,9 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 - **👁️ Mob Awareness** - Reacts to nearby hostile and neutral mobs
 - **🔄 Response Cleaning** - Removes AI artifacts and formatting tags
 - **⏸️ Pause Menu Integration** - Access AI settings directly from game menu
+- **❤️ Relationship Bonuses** - Better combat, healing, and protection at higher relationship levels
+- **⚔️ Player Kill Reactions** - Comments when you defeat enemies
+- **💊 Auto-Heal Owner** - Uses golden apples to heal you when relationship is high enough
 
 ### ❤️ Original Features (CC0 Licensed - UltimateGamerMC)
 
@@ -243,6 +246,7 @@ girlfriend-mod/
 │   │   ├── OpenRouterClient.java    # OpenRouter API integration
 │   │   ├── KoboldCppClient.java     # KoboldCpp API integration
 │   │   ├── ConversationManager.java # Memory system
+│   │   ├── RelationshipManager.java # Relationship logic and sentiment analysis
 │   │   └── ResponseCleaner.java     # AI response cleaning utility
 │   ├── entity/
 │   │   └── GirlFriendEntity.java    # Core entity

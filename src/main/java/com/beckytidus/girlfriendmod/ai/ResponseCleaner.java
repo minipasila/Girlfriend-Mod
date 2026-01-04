@@ -59,6 +59,7 @@ public class ResponseCleaner {
 
     /**
      * Clean an AI response by removing unwanted artifacts and formatting.
+     * Designed for Chat/Dialogue (removes trailing punctuation).
      *
      * @param response The raw AI response
      * @return Cleaned response
@@ -84,10 +85,10 @@ public class ResponseCleaner {
         }
 
         // Remove any trailing punctuation that might have been left by cleanup
+        // WARNING: This strips '}' from JSON, use cleanJsonResponse for JSON
         cleaned = cleaned.replaceAll("[\\s\\p{Punct}]+$", "");
 
         // Add ellipsis if the response ends abruptly (only if it fits the character's style)
-        // This is now optional based on the system prompt
         if (!cleaned.endsWith("...") && !cleaned.endsWith("~") && !cleaned.endsWith(":3") &&
             !cleaned.endsWith(">.<") && !cleaned.endsWith("^-^") && !cleaned.endsWith(".") &&
             !cleaned.endsWith("!") && !cleaned.endsWith("?")) {
@@ -98,6 +99,29 @@ public class ResponseCleaner {
         }
 
         return cleaned;
+    }
+
+    /**
+     * Clean an AI response intended to be JSON.
+     * Removes artifacts but PRESERVES JSON structure (braces, quotes, etc).
+     *
+     * @param response The raw AI response
+     * @return Cleaned response for JSON parsing
+     */
+    public static String cleanJsonResponse(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            return "{}";
+        }
+
+        String cleaned = response.trim();
+
+        // Apply all cleanup patterns
+        for (Pattern pattern : CLEANUP_PATTERNS) {
+            cleaned = pattern.matcher(cleaned).replaceAll("");
+        }
+
+        // Just trim, DO NOT remove trailing punctuation
+        return cleaned.trim();
     }
 
     /**

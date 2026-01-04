@@ -2,6 +2,7 @@ package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
+// ... imports ...
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -9,7 +10,6 @@ import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class OpenRouterClient {
+    // ... fields ...
     private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
@@ -31,11 +32,12 @@ public class OpenRouterClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-openrouter");
 
     public static String loadSystemPrompt(String name, String systemContext) {
+        // ... implementation ...
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
 
         if (promptFile.exists()) {
-            try {
+             try {
                 String customPrompt = Files.readString(promptFile.toPath());
                 if (customPrompt != null && !customPrompt.trim().isEmpty()) {
                     customPrompt = customPrompt.replace("{name}", name);
@@ -47,10 +49,9 @@ public class OpenRouterClient {
                 LOGGER.warn("Failed to read custom system prompt file for OpenRouter, using default", e);
             }
         }
-
         return buildDefaultPrompt(name, systemContext);
     }
-
+    
     private static String buildDefaultPrompt(String name, String systemContext) {
         return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
                 "## CORE LINGUISTIC CONSTRAINTS\n" +
@@ -81,7 +82,10 @@ public class OpenRouterClient {
         ModConfig config = ModConfig.get();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
         String prompt = loadSystemPrompt(name, systemContext);
-        return generateRaw(history, prompt);
+        
+        // CLEAN for chat
+        return generateRaw(history, prompt)
+                .thenApply(ResponseCleaner::cleanResponse);
     }
 
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
@@ -92,6 +96,7 @@ public class OpenRouterClient {
             return CompletableFuture.completedFuture("please set your api key in config... ^^");
         }
 
+        // ... request construction ...
         JsonObject body = new JsonObject();
         body.addProperty("model", config.getActiveModelName());
         body.addProperty("stream", false);
@@ -100,7 +105,6 @@ public class OpenRouterClient {
         body.addProperty("min_p", config.minP);
 
         JsonArray messages = new JsonArray();
-
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content", systemPrompt);
@@ -149,11 +153,8 @@ public class OpenRouterClient {
                             return "...";
                         }
 
-                        // NEW: Clean the response
-                        String cleanedContent = ResponseCleaner.cleanResponse(content);
-                        LOGGER.info("[AI Debug] Cleaned Response: {}", cleanedContent);
-
-                        return cleanedContent;
+                        // DO NOT CLEAN HERE. Return raw.
+                        return content;
                     } catch (Exception e) {
                         LOGGER.error("Error parsing OpenRouter response", e);
                         return "error parsing response... " + e.getMessage();
@@ -164,7 +165,9 @@ public class OpenRouterClient {
     public static CompletableFuture<String> summarize(List<ChatMessage> history) {
         List<ChatMessage> summaryPrompt = new ArrayList<>(history);
         summaryPrompt.add(new ChatMessage("user", "Summarize our conversation and your memories of me so far in detail while keeping it concise."));
-        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.");
+        // Summaries are text, so we clean them
+        return generateRaw(summaryPrompt, "You are a helpful assistant summarizer.")
+                .thenApply(ResponseCleaner::cleanResponse);
     }
 
     public static class ChatMessage {

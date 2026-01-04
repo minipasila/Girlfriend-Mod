@@ -68,68 +68,28 @@ public class AIClientManager {
     }
 
     /**
-     * Analyzes the conversation history to determine if the user is asking for a gift.
-     * Uses the latest messages for context.
+     * @deprecated Use {@link RelationshipManager#analyzeInteraction(String, List, List, String)} instead.
+     * This old method only checked for item requests without sentiment analysis.
      */
+    @Deprecated
     public static CompletableFuture<Boolean> analyzeIntent(String userMessage, List<ChutesClient.ChatMessage> history) {
-        String systemPrompt = "You are a logic engine. Analyze the conversation history, specifically the latest message from the user, to see if they are explicitly asking for an item, gift, food, or resource from {NAME}. " +
-            "If they are asking for an item (e.g. 'can i have a diamond', 'give me food', 'hand it over', 'do you have that?'), output 'ACTION_GIVE'. " +
-            "If they are just chatting (e.g. 'hello', 'what is that', 'cool'), output 'ACTION_NONE'. " +
-            "Only output the action code.";
-
-        return generateRaw(history, systemPrompt).thenApply(response -> {
-            if (response == null) return false;
-
-            // Clean the response before checking
-            String cleaned = ResponseCleaner.cleanResponse(response);
-            return cleaned.toUpperCase().contains("ACTION_GIVE");
-        });
+        // Return false to maintain backward compatibility
+        return CompletableFuture.completedFuture(false);
     }
 
     /**
-     * Asks the AI to select an item from the provided inventory list based on the user's request and context.
-     * Returns "MISSING" if no match found, or the exact item name.
+     * @deprecated Use {@link RelationshipManager#analyzeInteraction(String, List, List, String)} instead.
+     * The new method handles both sentiment analysis and item requests in one call.
      */
+    @Deprecated
     public static CompletableFuture<String> selectItemFromInventory(List<String> inventoryNames, String userMessage, List<ChutesClient.ChatMessage> history) {
-        if (inventoryNames.isEmpty()) {
-            return CompletableFuture.completedFuture("EMPTY");
-        }
-
-        String inventoryListStr = inventoryNames.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", "));
-
-        String systemPrompt = "You are a logic engine. The user is asking for an item from {NAME}'s inventory. " +
-            "The available items are: [" + inventoryListStr + "]. " +
-            "Analyze the conversation history and the user's latest message: \"" + userMessage + "\". " +
-            "Rules:\n" +
-            "1. If the user asks for a specific item, or refers to one from context (e.g. 'give me that', 'the food'), pick the best matching item from the list and return its name.\n" +
-            "2. If the user asks for 'food' or a general category, pick the best matching item from the list and return its name.\n" +
-            "3. If the user just asks for 'a gift' or 'something', pick the most valuable or logical item from the list and return its name.\n" +
-            "4. If the requested item is NOT in the provided list, return ONLY the word 'MISSING'.\n" +
-            "5. Output ONLY the item name or the word 'MISSING'. Do not write sentences or additional text.";
-
-        return generateRaw(history, systemPrompt).thenApply(response -> {
-            if (response == null) return "MISSING";
-
-            // Clean the response
-            String rawResponse = ResponseCleaner.cleanResponse(response).trim();
-
-            // Remove any trailing punctuation
-            if (rawResponse.endsWith(".")) {
-                rawResponse = rawResponse.substring(0, rawResponse.length() - 1);
-            }
-
-            final String clean = rawResponse;
-
-            if (inventoryNames.stream().anyMatch(name -> name.equalsIgnoreCase(clean)) || clean.equalsIgnoreCase("MISSING")) {
-                return clean;
-            } else {
-                return "MISSING";
-            }
-        });
+        // Return MISSING to maintain backward compatibility
+        return CompletableFuture.completedFuture("MISSING");
     }
 
     /**
      * Asks the AI to select the least valuable/useless item to drop from the inventory.
+     * This is still used by GirlFriendEntity.tickInventoryManagement()
      */
     public static CompletableFuture<String> selectItemToDrop(List<String> inventoryNames, List<ChutesClient.ChatMessage> history) {
         if (inventoryNames.isEmpty()) {

@@ -23,7 +23,7 @@ public class EntityRegistry {
                 Registries.ENTITY_TYPE,
                 id,
                 FabricEntityTypeBuilder.create(SpawnGroup.CREATURE, GirlFriendEntity::new)
-                        .dimensions(EntityDimensions.changing(0.9f, 1.9f))
+                        .dimensions(EntityDimensions.changing(0.6f, 1.9f))
                         .build(key)
         );
     }
