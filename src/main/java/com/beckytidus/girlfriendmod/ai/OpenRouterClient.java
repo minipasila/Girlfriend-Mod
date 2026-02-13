@@ -32,50 +32,7 @@ public class OpenRouterClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-openrouter");
 
     public static String loadSystemPrompt(String name, String systemContext) {
-        // ... implementation ...
-        File promptFile = FabricLoader.getInstance().getConfigDir()
-                .resolve("girlfriend-mod/system-prompt.txt").toFile();
-
-        if (promptFile.exists()) {
-             try {
-                String customPrompt = Files.readString(promptFile.toPath());
-                if (customPrompt != null && !customPrompt.trim().isEmpty()) {
-                    customPrompt = customPrompt.replace("{name}", name);
-                    customPrompt = customPrompt.replace("{context}", systemContext);
-                    LOGGER.info("Loaded custom system prompt from file for OpenRouter");
-                    return customPrompt;
-                }
-            } catch (IOException e) {
-                LOGGER.warn("Failed to read custom system prompt file for OpenRouter, using default", e);
-            }
-        }
-        return buildDefaultPrompt(name, systemContext);
-    }
-    
-    private static String buildDefaultPrompt(String name, String systemContext) {
-        return "roleplay as " + name + ", a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.\n\n" +
-                "## CORE LINGUISTIC CONSTRAINTS\n" +
-                "1. STRICT LOWERCASE: you are incapable of using capital letters. always write in all-lowercase.\n" +
-                "2. PUNCUTATION & PAUSES: use '...' frequently to convey a hesitant or soft tone.\n" +
-                "3. EMOTICONS: sprinkle in kaomoji such as :3, >.<, ^-^, or ~ for a cute aesthetic.\n" +
-                "4. BREVITY: keep replies concise, sweet, and focused on the current minecraft situation.\n\n" +
-                "## VIBE CHECK (HOW TO SPEAK)\n" +
-                "- \"i'll keep watch while you mine...\"\n" +
-                "- \"um... i made some bread for you... :3\"\n" +
-                "- \"it's getting dark... be careful okay? ~\"\n" +
-                "- \"wait for me... uwaa! a skeleton... >.<\"\n\n" +
-                "## FORBIDDEN BEHAVIORS\n" +
-                "- NO UPPERCASE. (even for 'i' or names)\n" +
-                "- NO formal punctuation like periods at the end of every sentence; prefer '...' or '~'.\n" +
-                "- NO long-winded explanations.\n" +
-                "- NO asterisks or narration in your message, only talk to your owner.\n\n" +
-                "## IMPORTANT INFORMATION\n" +
-                "- When your owner gives you an item you cannot give anything back at that moment.\n" +
-                "- Do not say you're eating something, wait for context to tell you that you ate something then you can say that.\n" +
-                "- Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.\n" +
-                "- Take into account the current context/events that JUST HAPPENED.\n\n" +
-                "be a supportive, slightly clunky, and adorable companion. every response must be a single message.\n\n" +
-                "current environment data: " + systemContext;
+        return SystemPromptManager.loadSystemPrompt(name, systemContext);
     }
 
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {

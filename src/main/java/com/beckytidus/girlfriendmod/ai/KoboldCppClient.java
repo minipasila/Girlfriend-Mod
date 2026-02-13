@@ -28,7 +28,7 @@ public class KoboldCppClient {
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-koboldcpp");
 
     public static String loadSystemPrompt(String name, String systemContext) {
-        return ChutesClient.loadSystemPrompt(name, systemContext);
+        return SystemPromptManager.loadSystemPrompt(name, systemContext);
     }
 
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
