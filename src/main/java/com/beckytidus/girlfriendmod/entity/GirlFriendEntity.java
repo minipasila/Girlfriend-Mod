@@ -652,8 +652,8 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             if (owner == null || !isFollowing) return false;
             if (GirlFriendEntity.this.getTarget() != null) return false; // Don't interact with doors during combat
 
-            // Check if we're close to a door, trapdoor, or fence gate
-            return findNearbyInteractable() != null;
+            // Check if we're close to a door, trapdoor, or fence gate (either closed or open)
+            return findNearbyClosedInteractable() != null || findNearbyOpenInteractable() != null;
         }
 
         @Override
@@ -663,7 +663,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
 
         @Override
         public void tick() {
-            // Check if we need to close a previously opened block
+            // Check if we need to close a previously opened/passed block
             if (lastOpenedDoorPos != null) {
                 long currentTime = GirlFriendEntity.this.age;
                 double distanceToBlock = GirlFriendEntity.this.squaredDistanceTo(lastOpenedDoorPos.getX() + 0.5, lastOpenedDoorPos.getY(), lastOpenedDoorPos.getZ() + 0.5);
@@ -675,18 +675,26 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 }
             }
 
-            // Check for new doors/trapdoors/fence gates to open
-            BlockPos blockPos = findNearbyInteractable();
-            if (blockPos != null && !blockPos.equals(lastOpenedDoorPos)) {
-                openInteractable(blockPos);
+            // Check for closed doors/trapdoors/fence gates to open
+            BlockPos closedBlockPos = findNearbyClosedInteractable();
+            if (closedBlockPos != null && !closedBlockPos.equals(lastOpenedDoorPos)) {
+                openInteractable(closedBlockPos);
+            }
+
+            // Check for already open doors/trapdoors/fence gates to track for closing
+            BlockPos openBlockPos = findNearbyOpenInteractable();
+            if (openBlockPos != null && !openBlockPos.equals(lastOpenedDoorPos)) {
+                // Track this open door so we can close it after passing through
+                lastOpenedDoorPos = openBlockPos;
+                doorOpenTime = GirlFriendEntity.this.age;
             }
         }
 
-        private BlockPos findNearbyInteractable() {
+        private BlockPos findNearbyClosedInteractable() {
             BlockPos entityPos = GirlFriendEntity.this.getBlockPos();
             World world = GirlFriendEntity.this.getEntityWorld();
 
-            // Check blocks around the entity for doors, trapdoors, and fence gates
+            // Check blocks around the entity for CLOSED doors, trapdoors, and fence gates
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     for (int dy = 0; dy <= 1; dy++) {
@@ -723,6 +731,57 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                             if (state.contains(FenceGateBlock.OPEN)) {
                                 boolean isOpen = state.get(FenceGateBlock.OPEN);
                                 if (!isOpen) {
+                                    return checkPos;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        private BlockPos findNearbyOpenInteractable() {
+            BlockPos entityPos = GirlFriendEntity.this.getBlockPos();
+            World world = GirlFriendEntity.this.getEntityWorld();
+
+            // Check blocks around the entity for OPEN doors, trapdoors, and fence gates
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    for (int dy = 0; dy <= 1; dy++) {
+                        BlockPos checkPos = entityPos.add(dx, dy, dz);
+                        BlockState state = world.getBlockState(checkPos);
+
+                        // Check for doors
+                        if (state.getBlock() instanceof DoorBlock) {
+                            if (state.contains(DoorBlock.OPEN)) {
+                                boolean isOpen = state.get(DoorBlock.OPEN);
+
+                                // Return open doors
+                                if (isOpen) {
+                                    // Make sure it's the lower half of the door
+                                    if (state.contains(DoorBlock.HALF) && state.get(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                                        return checkPos;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Check for trapdoors
+                        if (state.getBlock() instanceof TrapdoorBlock) {
+                            if (state.contains(TrapdoorBlock.OPEN)) {
+                                boolean isOpen = state.get(TrapdoorBlock.OPEN);
+                                if (isOpen) {
+                                    return checkPos;
+                                }
+                            }
+                        }
+
+                        // Check for fence gates
+                        if (state.getBlock() instanceof FenceGateBlock) {
+                            if (state.contains(FenceGateBlock.OPEN)) {
+                                boolean isOpen = state.get(FenceGateBlock.OPEN);
+                                if (isOpen) {
                                     return checkPos;
                                 }
                             }
