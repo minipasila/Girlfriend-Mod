@@ -706,6 +706,10 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         return !this.isKnockedOut && super.isPushable();
     }
 
+    public boolean canOpenDoors() {
+        return true;
+    }
+
     @Override
     public boolean canTarget(LivingEntity target) {
         return !this.isKnockedOut && super.canTarget(target);
