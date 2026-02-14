@@ -7,6 +7,8 @@ import com.beckytidus.girlfriendmod.ai.RelationshipManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.DoorBlock;
+import net.minecraft.block.TrapdoorBlock;
+import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -636,7 +638,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         }
     }
 
-    // Door interaction goal - opens and closes doors when following
+    // Door/Trapdoor/FenceGate interaction goal - opens and closes when following
     private class DoorInteractGoal extends Goal {
         private static final double DOOR_DETECT_RANGE = 2.5;
 
@@ -650,8 +652,8 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             if (owner == null || !isFollowing) return false;
             if (GirlFriendEntity.this.getTarget() != null) return false; // Don't interact with doors during combat
 
-            // Check if we're close to a door
-            return findNearbyDoor() != null;
+            // Check if we're close to a door, trapdoor, or fence gate
+            return findNearbyInteractable() != null;
         }
 
         @Override
@@ -661,39 +663,38 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
 
         @Override
         public void tick() {
-            // Check if we need to close a previously opened door
+            // Check if we need to close a previously opened block
             if (lastOpenedDoorPos != null) {
                 long currentTime = GirlFriendEntity.this.age;
-                double distanceToDoor = GirlFriendEntity.this.squaredDistanceTo(lastOpenedDoorPos.getX() + 0.5, lastOpenedDoorPos.getY(), lastOpenedDoorPos.getZ() + 0.5);
+                double distanceToBlock = GirlFriendEntity.this.squaredDistanceTo(lastOpenedDoorPos.getX() + 0.5, lastOpenedDoorPos.getY(), lastOpenedDoorPos.getZ() + 0.5);
 
-                // Close the door after delay AND when we've moved away from it
-                if (currentTime - doorOpenTime >= DOOR_CLOSE_DELAY && distanceToDoor > 2.0) {
-                    closeDoor(lastOpenedDoorPos);
+                // Close the block after delay AND when we've moved away from it
+                if (currentTime - doorOpenTime >= DOOR_CLOSE_DELAY && distanceToBlock > 2.0) {
+                    closeInteractable(lastOpenedDoorPos);
                     lastOpenedDoorPos = null;
                 }
             }
 
-            // Check for new doors to open
-            BlockPos doorPos = findNearbyDoor();
-            if (doorPos != null && !doorPos.equals(lastOpenedDoorPos)) {
-                openDoor(doorPos);
+            // Check for new doors/trapdoors/fence gates to open
+            BlockPos blockPos = findNearbyInteractable();
+            if (blockPos != null && !blockPos.equals(lastOpenedDoorPos)) {
+                openInteractable(blockPos);
             }
         }
 
-        private BlockPos findNearbyDoor() {
+        private BlockPos findNearbyInteractable() {
             BlockPos entityPos = GirlFriendEntity.this.getBlockPos();
             World world = GirlFriendEntity.this.getEntityWorld();
 
-            // Check blocks around the entity for doors
+            // Check blocks around the entity for doors, trapdoors, and fence gates
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     for (int dy = 0; dy <= 1; dy++) {
                         BlockPos checkPos = entityPos.add(dx, dy, dz);
                         BlockState state = world.getBlockState(checkPos);
 
+                        // Check for doors
                         if (state.getBlock() instanceof DoorBlock) {
-                            // Check if it's a wooden door (can be opened by mobs)
-                            // Iron doors require redstone
                             if (state.contains(DoorBlock.OPEN)) {
                                 boolean isOpen = state.get(DoorBlock.OPEN);
 
@@ -706,44 +707,102 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                                 }
                             }
                         }
+
+                        // Check for trapdoors
+                        if (state.getBlock() instanceof TrapdoorBlock) {
+                            if (state.contains(TrapdoorBlock.OPEN)) {
+                                boolean isOpen = state.get(TrapdoorBlock.OPEN);
+                                if (!isOpen) {
+                                    return checkPos;
+                                }
+                            }
+                        }
+
+                        // Check for fence gates
+                        if (state.getBlock() instanceof FenceGateBlock) {
+                            if (state.contains(FenceGateBlock.OPEN)) {
+                                boolean isOpen = state.get(FenceGateBlock.OPEN);
+                                if (!isOpen) {
+                                    return checkPos;
+                                }
+                            }
+                        }
                     }
                 }
             }
             return null;
         }
 
-        private void openDoor(BlockPos doorPos) {
+        private void openInteractable(BlockPos blockPos) {
             World world = GirlFriendEntity.this.getEntityWorld();
-            BlockState state = world.getBlockState(doorPos);
+            BlockState state = world.getBlockState(blockPos);
 
+            // Handle doors
             if (state.getBlock() instanceof DoorBlock && state.contains(DoorBlock.OPEN)) {
-                // Toggle the door open
                 BlockState newState = state.with(DoorBlock.OPEN, true);
-                world.setBlockState(doorPos, newState, 10);
-
-                // Play door open sound
+                world.setBlockState(blockPos, newState, 10);
                 GirlFriendEntity.this.playSound(SoundEvents.BLOCK_WOODEN_DOOR_OPEN, 1.0F, 1.0F);
-
-                // Track this door for closing later
-                lastOpenedDoorPos = doorPos;
+                lastOpenedDoorPos = blockPos;
                 doorOpenTime = GirlFriendEntity.this.age;
+                return;
+            }
+
+            // Handle trapdoors
+            if (state.getBlock() instanceof TrapdoorBlock && state.contains(TrapdoorBlock.OPEN)) {
+                BlockState newState = state.with(TrapdoorBlock.OPEN, true);
+                world.setBlockState(blockPos, newState, 10);
+                GirlFriendEntity.this.playSound(SoundEvents.BLOCK_WOODEN_TRAPDOOR_OPEN, 1.0F, 1.0F);
+                lastOpenedDoorPos = blockPos;
+                doorOpenTime = GirlFriendEntity.this.age;
+                return;
+            }
+
+            // Handle fence gates
+            if (state.getBlock() instanceof FenceGateBlock && state.contains(FenceGateBlock.OPEN)) {
+                BlockState newState = state.with(FenceGateBlock.OPEN, true);
+                world.setBlockState(blockPos, newState, 10);
+                GirlFriendEntity.this.playSound(SoundEvents.BLOCK_FENCE_GATE_OPEN, 1.0F, 1.0F);
+                lastOpenedDoorPos = blockPos;
+                doorOpenTime = GirlFriendEntity.this.age;
+                return;
             }
         }
 
-        private void closeDoor(BlockPos doorPos) {
+        private void closeInteractable(BlockPos blockPos) {
             World world = GirlFriendEntity.this.getEntityWorld();
-            BlockState state = world.getBlockState(doorPos);
+            BlockState state = world.getBlockState(blockPos);
 
+            // Handle doors
             if (state.getBlock() instanceof DoorBlock && state.contains(DoorBlock.OPEN)) {
                 boolean isOpen = state.get(DoorBlock.OPEN);
                 if (isOpen) {
-                    // Toggle the door closed
                     BlockState newState = state.with(DoorBlock.OPEN, false);
-                    world.setBlockState(doorPos, newState, 10);
-
-                    // Play door close sound
+                    world.setBlockState(blockPos, newState, 10);
                     GirlFriendEntity.this.playSound(SoundEvents.BLOCK_WOODEN_DOOR_CLOSE, 1.0F, 1.0F);
                 }
+                return;
+            }
+
+            // Handle trapdoors
+            if (state.getBlock() instanceof TrapdoorBlock && state.contains(TrapdoorBlock.OPEN)) {
+                boolean isOpen = state.get(TrapdoorBlock.OPEN);
+                if (isOpen) {
+                    BlockState newState = state.with(TrapdoorBlock.OPEN, false);
+                    world.setBlockState(blockPos, newState, 10);
+                    GirlFriendEntity.this.playSound(SoundEvents.BLOCK_WOODEN_TRAPDOOR_CLOSE, 1.0F, 1.0F);
+                }
+                return;
+            }
+
+            // Handle fence gates
+            if (state.getBlock() instanceof FenceGateBlock && state.contains(FenceGateBlock.OPEN)) {
+                boolean isOpen = state.get(FenceGateBlock.OPEN);
+                if (isOpen) {
+                    BlockState newState = state.with(FenceGateBlock.OPEN, false);
+                    world.setBlockState(blockPos, newState, 10);
+                    GirlFriendEntity.this.playSound(SoundEvents.BLOCK_FENCE_GATE_CLOSE, 1.0F, 1.0F);
+                }
+                return;
             }
         }
     }
