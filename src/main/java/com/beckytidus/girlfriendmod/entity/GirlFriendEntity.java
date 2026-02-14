@@ -5,6 +5,9 @@ import com.beckytidus.girlfriendmod.ai.ChutesClient;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
 import com.beckytidus.girlfriendmod.ai.RelationshipManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.DoorBlock;
+import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
@@ -36,6 +39,7 @@ import net.minecraft.storage.ReadView;
 import net.minecraft.storage.WriteView;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.component.DataComponentTypes;
@@ -103,6 +107,11 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     private MeleeAttackGoal meleeAttackGoal;
     private ProjectileAttackGoal bowAttackGoal;
     private boolean wasUsingBow = false;
+
+    // Door interaction state
+    private BlockPos lastOpenedDoorPos = null;
+    private long doorOpenTime = 0;
+    private static final long DOOR_CLOSE_DELAY = 20L; // ticks before closing (~1 second)
 
     public enum GiveResult {
         SUCCESS,
@@ -205,6 +214,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         this.bowAttackGoal = new ProjectileAttackGoal(this, 1.0, 20, 15.0f);
 
         this.goalSelector.add(0, new SwimGoal(this));
+        this.goalSelector.add(1, new DoorInteractGoal());
 
         this.goalSelector.add(2, meleeAttackGoal);
 
@@ -621,6 +631,118 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 GirlFriendEntity.this.getNavigation().stop();
                 if (!owner.isSprinting()) {
                     GirlFriendEntity.this.setSprinting(false);
+                }
+            }
+        }
+    }
+
+    // Door interaction goal - opens and closes doors when following
+    private class DoorInteractGoal extends Goal {
+        private static final double DOOR_DETECT_RANGE = 2.5;
+
+        public DoorInteractGoal() {
+            this.setControls(EnumSet.of(Control.MOVE, Control.LOOK));
+        }
+
+        @Override
+        public boolean canStart() {
+            if (isKnockedOut) return false;
+            if (owner == null || !isFollowing) return false;
+            if (GirlFriendEntity.this.getTarget() != null) return false; // Don't interact with doors during combat
+
+            // Check if we're close to a door
+            return findNearbyDoor() != null;
+        }
+
+        @Override
+        public boolean shouldContinue() {
+            return !isKnockedOut && lastOpenedDoorPos != null;
+        }
+
+        @Override
+        public void tick() {
+            // Check if we need to close a previously opened door
+            if (lastOpenedDoorPos != null) {
+                long currentTime = GirlFriendEntity.this.age;
+                double distanceToDoor = GirlFriendEntity.this.squaredDistanceTo(lastOpenedDoorPos.getX() + 0.5, lastOpenedDoorPos.getY(), lastOpenedDoorPos.getZ() + 0.5);
+
+                // Close the door after delay AND when we've moved away from it
+                if (currentTime - doorOpenTime >= DOOR_CLOSE_DELAY && distanceToDoor > 2.0) {
+                    closeDoor(lastOpenedDoorPos);
+                    lastOpenedDoorPos = null;
+                }
+            }
+
+            // Check for new doors to open
+            BlockPos doorPos = findNearbyDoor();
+            if (doorPos != null && !doorPos.equals(lastOpenedDoorPos)) {
+                openDoor(doorPos);
+            }
+        }
+
+        private BlockPos findNearbyDoor() {
+            BlockPos entityPos = GirlFriendEntity.this.getBlockPos();
+            World world = GirlFriendEntity.this.getEntityWorld();
+
+            // Check blocks around the entity for doors
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    for (int dy = 0; dy <= 1; dy++) {
+                        BlockPos checkPos = entityPos.add(dx, dy, dz);
+                        BlockState state = world.getBlockState(checkPos);
+
+                        if (state.getBlock() instanceof DoorBlock) {
+                            // Check if it's a wooden door (can be opened by mobs)
+                            // Iron doors require redstone
+                            if (state.contains(DoorBlock.OPEN)) {
+                                boolean isOpen = state.get(DoorBlock.OPEN);
+
+                                // Only return closed doors
+                                if (!isOpen) {
+                                    // Make sure it's the lower half of the door
+                                    if (state.contains(DoorBlock.HALF) && state.get(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+                                        return checkPos;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        private void openDoor(BlockPos doorPos) {
+            World world = GirlFriendEntity.this.getEntityWorld();
+            BlockState state = world.getBlockState(doorPos);
+
+            if (state.getBlock() instanceof DoorBlock && state.contains(DoorBlock.OPEN)) {
+                // Toggle the door open
+                BlockState newState = state.with(DoorBlock.OPEN, true);
+                world.setBlockState(doorPos, newState, 10);
+
+                // Play door open sound
+                GirlFriendEntity.this.playSound(SoundEvents.BLOCK_WOODEN_DOOR_OPEN, 1.0F, 1.0F);
+
+                // Track this door for closing later
+                lastOpenedDoorPos = doorPos;
+                doorOpenTime = GirlFriendEntity.this.age;
+            }
+        }
+
+        private void closeDoor(BlockPos doorPos) {
+            World world = GirlFriendEntity.this.getEntityWorld();
+            BlockState state = world.getBlockState(doorPos);
+
+            if (state.getBlock() instanceof DoorBlock && state.contains(DoorBlock.OPEN)) {
+                boolean isOpen = state.get(DoorBlock.OPEN);
+                if (isOpen) {
+                    // Toggle the door closed
+                    BlockState newState = state.with(DoorBlock.OPEN, false);
+                    world.setBlockState(doorPos, newState, 10);
+
+                    // Play door close sound
+                    GirlFriendEntity.this.playSound(SoundEvents.BLOCK_WOODEN_DOOR_CLOSE, 1.0F, 1.0F);
                 }
             }
         }
