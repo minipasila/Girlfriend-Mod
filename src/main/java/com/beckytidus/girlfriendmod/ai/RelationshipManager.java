@@ -2,6 +2,8 @@ package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.entity.GirlFriendEntity;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.particle.ParticleTypes;
@@ -9,7 +11,9 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class RelationshipManager {
@@ -22,17 +26,60 @@ public class RelationshipManager {
         this.relationshipLevel = entity.getRelationshipLevel();
     }
 
+    /**
+     * Represents a single item request with optional quantity.
+     * Used when the player asks for items.
+     */
+    public static class ItemRequest {
+        public final String itemName;
+        public final Integer quantity; // null = give all, specific number = give that many
+
+        public ItemRequest(String itemName, Integer quantity) {
+            this.itemName = itemName;
+            this.quantity = quantity;
+        }
+
+        @Override
+        public String toString() {
+            return quantity == null ? itemName : quantity + "x " + itemName;
+        }
+    }
+
     public static class InteractionResult {
         public String reasoning;
         public String sentiment; // "positive", "negative", "neutral"
         public String action; // "give_item", "none", "compliment_response", "insult_response"
-        public String item; // item name or null
+        public String item; // item name or null (legacy, for single items)
+        public List<ItemRequest> items; // list of item requests (for multiple items)
 
         public InteractionResult(String reasoning, String sentiment, String action, String item) {
             this.reasoning = reasoning;
             this.sentiment = sentiment;
             this.action = action;
             this.item = item;
+            this.items = new ArrayList<>();
+        }
+
+        public InteractionResult(String reasoning, String sentiment, String action, List<ItemRequest> items) {
+            this.reasoning = reasoning;
+            this.sentiment = sentiment;
+            this.action = action;
+            this.item = items.isEmpty() ? null : items.get(0).itemName;
+            this.items = items;
+        }
+
+        /**
+         * Check if this result has multiple item requests.
+         */
+        public boolean hasMultipleItems() {
+            return items != null && items.size() > 1;
+        }
+
+        /**
+         * Check if any item request asks for "all" of an item.
+         */
+        public boolean hasGiveAllRequest() {
+            return items != null && items.stream().anyMatch(req -> req.quantity == null);
         }
     }
 
@@ -65,7 +112,7 @@ public class RelationshipManager {
             THINKING PROCESS:
             1. First, analyze the CONTEXT: Is the player talking to %s directly? Or about something else?
             2. Then, analyze SENTIMENT: Is this a compliment, insult, or neutral statement TOWARD %s?
-            3. Then, analyze INTENT: Is the player asking for an item from %s's inventory?
+            3. Then, analyze INTENT: Is the player asking for items from %s's inventory?
             4. Finally, make a DECISION based on your analysis.
 
             IMPORTANT RULES:
@@ -75,6 +122,15 @@ public class RelationshipManager {
             - For vague requests like "give me that", check conversation context for what "that" refers to
             - If unsure about sentiment, default to NEUTRAL
             - If unsure about item request, default to NONE
+
+            ITEM REQUEST PARSING:
+            - "give me diamonds" -> items: [{"name": "Diamond", "quantity": null}] (null = give all)
+            - "give me 32 diamonds" -> items: [{"name": "Diamond", "quantity": 32}]
+            - "give me all your diamonds" -> items: [{"name": "Diamond", "quantity": null}]
+            - "give me diamonds and iron" -> items: [{"name": "Diamond", "quantity": null}, {"name": "Iron Ingot", "quantity": null}]
+            - "give me 10 diamonds and 20 iron" -> items: [{"name": "Diamond", "quantity": 10}, {"name": "Iron Ingot", "quantity": 20}]
+            - Match item names to the available inventory (case-insensitive, partial matches OK)
+            - If quantity not specified, use null to indicate "give all"
 
             Available inventory: [%s]
 
@@ -88,7 +144,7 @@ public class RelationshipManager {
               "reasoning": "Brief explanation of your analysis",
               "sentiment": "positive|negative|neutral",
               "action": "give_item|none|compliment_response|insult_response",
-              "item": "exact_item_name|MISSING|null"
+              "items": [{"name": "item_name", "quantity": number_or_null}]
             }
 
             Only output the JSON object, nothing else.
@@ -99,7 +155,7 @@ public class RelationshipManager {
 
         return AIClientManager.generateRaw(history, systemPrompt).thenApply(response -> {
             if (response == null) {
-                return new InteractionResult("No response from AI", "neutral", "none", null);
+                return new InteractionResult("No response from AI", "neutral", "none", (String) null);
             }
 
             // USE cleanJsonResponse instead of cleanResponse
@@ -149,37 +205,66 @@ public class RelationshipManager {
                     action = "none";
                 }
 
-                // Validate item if action is give_item
-                if (action.equals("give_item")) {
-                    final String finalItem = item; // Create final copy for lambda
-                    if (finalItem == null || finalItem.equalsIgnoreCase("null") || finalItem.equalsIgnoreCase("missing")) {
-                        item = "MISSING";
-                    } else {
-                        // Check if item exists in inventory (case-insensitive)
-                        boolean found = inventoryItems.stream()
-                            .anyMatch(invItem -> invItem.equalsIgnoreCase(finalItem));
-                        if (!found) {
-                            // Try partial match
-                            found = inventoryItems.stream()
-                                .anyMatch(invItem -> invItem.toLowerCase().contains(finalItem.toLowerCase()) ||
-                                                    finalItem.toLowerCase().contains(invItem.toLowerCase()));
-                            if (found) {
-                                // Find the actual item name
-                                item = inventoryItems.stream()
-                                    .filter(invItem -> invItem.toLowerCase().contains(finalItem.toLowerCase()) ||
-                                                      finalItem.toLowerCase().contains(invItem.toLowerCase()))
+                // Parse items array if present (new format)
+                List<ItemRequest> parsedItems = new ArrayList<>();
+                if (action.equals("give_item") && json.has("items") && json.get("items").isJsonArray()) {
+                    JsonArray itemsArray = json.getAsJsonArray("items");
+                    for (JsonElement elem : itemsArray) {
+                        if (elem.isJsonObject()) {
+                            JsonObject itemObj = elem.getAsJsonObject();
+                            String itemName = itemObj.has("name") ? itemObj.get("name").getAsString() : null;
+                            Integer quantity = null;
+                            if (itemObj.has("quantity") && !itemObj.get("quantity").isJsonNull()) {
+                                try {
+                                    quantity = itemObj.get("quantity").getAsInt();
+                                } catch (NumberFormatException e) {
+                                    quantity = null; // Default to "all" if parsing fails
+                                }
+                            }
+                            if (itemName != null && !itemName.equalsIgnoreCase("null") && !itemName.equalsIgnoreCase("missing")) {
+                                // Match item name to inventory (case-insensitive, partial matches OK)
+                                String matchedName = inventoryItems.stream()
+                                    .filter(invItem -> invItem.equalsIgnoreCase(itemName) ||
+                                        invItem.toLowerCase().contains(itemName.toLowerCase()) ||
+                                        itemName.toLowerCase().contains(invItem.toLowerCase()))
                                     .findFirst()
-                                    .orElse("MISSING");
-                            } else {
-                                item = "MISSING";
+                                    .orElse(null);
+                                if (matchedName != null) {
+                                    parsedItems.add(new ItemRequest(matchedName, quantity));
+                                }
                             }
                         }
                     }
-                } else {
-                    item = null;
+                }
+                
+                // Fallback to legacy single item format if no items array or empty
+                if (parsedItems.isEmpty() && action.equals("give_item")) {
+                    final String finalItem = item;
+                    if (finalItem == null || finalItem.equalsIgnoreCase("null") || finalItem.equalsIgnoreCase("missing")) {
+                        // Still create an empty result for MISSING
+                    } else {
+                        // Check if item exists in inventory (case-insensitive)
+                        String matchedName = inventoryItems.stream()
+                            .filter(invItem -> invItem.equalsIgnoreCase(finalItem) ||
+                                invItem.toLowerCase().contains(finalItem.toLowerCase()) ||
+                                finalItem.toLowerCase().contains(invItem.toLowerCase()))
+                            .findFirst()
+                            .orElse("MISSING");
+                        if (!matchedName.equals("MISSING")) {
+                            parsedItems.add(new ItemRequest(matchedName, null)); // null quantity = give all
+                        }
+                    }
                 }
 
-                return new InteractionResult(reasoning, sentiment, action, item);
+                // Create result with items list
+                if (!parsedItems.isEmpty()) {
+                    return new InteractionResult(reasoning, sentiment, action, parsedItems);
+                } else {
+                    // No valid items found
+                    InteractionResult result = new InteractionResult(reasoning, sentiment, action, (String) null);
+                    result.item = "MISSING";
+                    return result;
+                }
 
             } catch (Exception e) {
                 System.err.println("Failed to parse AI response as JSON: " + cleaned);
@@ -220,12 +305,14 @@ public class RelationshipManager {
                     itemResult = "MISSING"; // Can't determine item from keywords alone
                 }
 
-                return new InteractionResult(
+                InteractionResult fallbackResult = new InteractionResult(
                     "Fallback analysis (JSON parse failed)",
                     sentiment,
                     action,
-                    itemResult
+                    (String) null
                 );
+                fallbackResult.item = itemResult;
+                return fallbackResult;
             }
         });
     }
@@ -456,7 +543,13 @@ public class RelationshipManager {
 
         switch(result.action) {
             case "give_item":
-                handleItemRequest(result.item, userMessage);
+                // Check if we have multiple items in the new format
+                if (result.items != null && !result.items.isEmpty()) {
+                    handleMultipleItemRequest(result.items, userMessage);
+                } else {
+                    // Fallback to legacy single item
+                    handleItemRequest(result.item, userMessage);
+                }
                 break;
 
             case "compliment_response":
@@ -486,6 +579,71 @@ public class RelationshipManager {
         }
     }
 
+    /**
+     * Handle requests for multiple items at once.
+     */
+    private void handleMultipleItemRequest(List<ItemRequest> items, String userMessage) {
+        if (items == null || items.isEmpty()) {
+            entity.generateAndSayResponse(String.format(
+                "The user asked for something, but %s couldn't understand what they wanted.",
+                entity.getNameForContext()
+            ));
+            return;
+        }
+
+        // Convert to GirlFriendEntity.ItemRequest list
+        List<GirlFriendEntity.ItemRequest> entityRequests = new ArrayList<>();
+        for (ItemRequest req : items) {
+            entityRequests.add(new GirlFriendEntity.ItemRequest(req.itemName, req.quantity));
+        }
+
+        GirlFriendEntity.MultiGiveResult result = entity.giveItems(entityRequests);
+        String name = entity.getNameForContext();
+        String response;
+
+        if (result.hasAnySuccess()) {
+            // Build success message
+            StringBuilder givenStr = new StringBuilder();
+            for (Map.Entry<String, Integer> entry : result.givenItems.entrySet()) {
+                if (givenStr.length() > 0) givenStr.append(", ");
+                givenStr.append(entry.getValue()).append("x ").append(entry.getKey());
+            }
+
+            response = String.format("%s gave the player: %s. Express happiness about sharing.", name, givenStr);
+
+            // Add relationship for each item given (if willing to share rare items or item isn't rare)
+            for (String itemName : result.givenItems.keySet()) {
+                if (willShareRareItems() || !isRareItem(itemName)) {
+                    entity.addRelationship(1);
+                }
+            }
+
+            // If there were also failures, mention them
+            if (!result.failedItems.isEmpty() || !result.notFoundItems.isEmpty()) {
+                response += " However, ";
+                if (!result.failedItems.isEmpty()) {
+                    response += "some items couldn't be given because the player's inventory is full. ";
+                }
+                if (!result.notFoundItems.isEmpty()) {
+                    response += "some items weren't found in " + name + "'s inventory. ";
+                }
+                response += "Apologize for the partial success.";
+            }
+        } else if (!result.failedItems.isEmpty()) {
+            response = String.format("%s tried to give items but the player's inventory is full. Apologize and suggest they make space.", name);
+        } else {
+            // Nothing was found
+            StringBuilder notFoundStr = new StringBuilder();
+            for (String itemName : result.notFoundItems) {
+                if (notFoundStr.length() > 0) notFoundStr.append(", ");
+                notFoundStr.append(itemName);
+            }
+            response = String.format("%s couldn't find %s to give. Apologize for not having the requested items.", name, notFoundStr);
+        }
+
+        entity.generateAndSayResponse(response);
+    }
+
     private void handleItemRequest(String itemName, String userMessage) {
         if (itemName == null || itemName.equals("MISSING") || itemName.equals("null")) {
             entity.generateAndSayResponse(String.format(
@@ -502,6 +660,13 @@ public class RelationshipManager {
         switch (result) {
             case SUCCESS:
                 response = String.format("%s gave %s to the player. Express happiness about sharing.", name, itemName);
+                if (willShareRareItems() || !isRareItem(itemName)) {
+                    entity.addRelationship(1);
+                }
+                break;
+
+            case PARTIAL:
+                response = String.format("%s gave some of the %s to the player (inventory was partially full). Express happiness about sharing what could be given.", name, itemName);
                 if (willShareRareItems() || !isRareItem(itemName)) {
                     entity.addRelationship(1);
                 }

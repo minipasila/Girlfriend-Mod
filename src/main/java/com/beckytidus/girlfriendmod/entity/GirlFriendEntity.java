@@ -118,7 +118,70 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     public enum GiveResult {
         SUCCESS,
         FULL,
-        NOT_FOUND
+        NOT_FOUND,
+        PARTIAL
+    }
+
+    /**
+     * Represents a request for a specific item with optional quantity.
+     * quantity = null means give all of that item
+     * quantity = specific number means give that many
+     */
+    public static class ItemRequest {
+        public final String itemName;
+        public final Integer quantity; // null = all
+
+        public ItemRequest(String itemName, Integer quantity) {
+            this.itemName = itemName;
+            this.quantity = quantity;
+        }
+
+        @Override
+        public String toString() {
+            return quantity == null ? itemName : quantity + "x " + itemName;
+        }
+    }
+
+    /**
+     * Result of giving multiple items.
+     */
+    public static class MultiGiveResult {
+        public final Map<String, Integer> givenItems; // item name -> count given
+        public final Map<String, Integer> failedItems; // item name -> count that couldn't be given
+        public final List<String> notFoundItems;
+
+        public MultiGiveResult() {
+            this.givenItems = new HashMap<>();
+            this.failedItems = new HashMap<>();
+            this.notFoundItems = new ArrayList<>();
+        }
+
+        public boolean hasAnySuccess() {
+            return !givenItems.isEmpty();
+        }
+
+        public String getSummary() {
+            StringBuilder sb = new StringBuilder();
+            if (!givenItems.isEmpty()) {
+                sb.append("Given: ");
+                sb.append(givenItems.entrySet().stream()
+                    .map(e -> e.getValue() + "x " + e.getKey())
+                    .collect(java.util.stream.Collectors.joining(", ")));
+            }
+            if (!failedItems.isEmpty()) {
+                if (sb.length() > 0) sb.append(". ");
+                sb.append("Couldn't give (inventory full): ");
+                sb.append(failedItems.entrySet().stream()
+                    .map(e -> e.getValue() + "x " + e.getKey())
+                    .collect(java.util.stream.Collectors.joining(", ")));
+            }
+            if (!notFoundItems.isEmpty()) {
+                if (sb.length() > 0) sb.append(". ");
+                sb.append("Not found: ");
+                sb.append(String.join(", ", notFoundItems));
+            }
+            return sb.toString();
+        }
     }
 
     public GirlFriendEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
@@ -1254,29 +1317,175 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     }
 
     public GiveResult giveSpecificItem(String targetItemName) {
+        return giveSpecificItem(targetItemName, 1);
+    }
+
+    /**
+     * Give a specific quantity of an item to the owner.
+     * @param targetItemName The name of the item to give
+     * @param quantity The quantity to give, or null to give all
+     * @return GiveResult indicating success, failure, or partial success
+     */
+    public GiveResult giveSpecificItem(String targetItemName, Integer quantity) {
         if (this.owner == null || this.inventory.isEmpty()) return GiveResult.NOT_FOUND;
 
-        for(int i=0; i<inventory.size(); i++) {
+        int totalAvailable = 0;
+        List<Integer> matchingSlots = new ArrayList<>();
+
+        // First, find all matching items and their total count
+        for (int i = 0; i < inventory.size(); i++) {
             ItemStack stack = inventory.getStack(i);
             if (!stack.isEmpty()) {
                 String stackName = stack.getName().getString();
                 if (stackName.equalsIgnoreCase(targetItemName) || stackName.toLowerCase().contains(targetItemName.toLowerCase())) {
-                    ItemStack toGive = stack.copy();
-                    toGive.setCount(1);
-
-                    if (this.owner.getInventory().insertStack(toGive)) {
-                        stack.decrement(1);
-                        if (stack.isEmpty()) {
-                            inventory.setStack(i, ItemStack.EMPTY);
-                        }
-                        return GiveResult.SUCCESS;
-                    } else {
-                        return GiveResult.FULL;
-                    }
+                    totalAvailable += stack.getCount();
+                    matchingSlots.add(i);
                 }
             }
         }
-        return GiveResult.NOT_FOUND;
+
+        if (matchingSlots.isEmpty()) {
+            return GiveResult.NOT_FOUND;
+        }
+
+        // Determine how many to give
+        int toGiveCount = quantity == null ? totalAvailable : Math.min(quantity, totalAvailable);
+
+        if (toGiveCount <= 0) {
+            return GiveResult.NOT_FOUND;
+        }
+
+        // Check if player inventory can accept all items
+        int canAccept = 0;
+        for (int slot : matchingSlots) {
+            ItemStack stack = inventory.getStack(slot);
+            ItemStack testStack = stack.copy();
+            testStack.setCount(Math.min(toGiveCount - canAccept, stack.getCount()));
+            // Simulate insertion by checking if we can add to player inventory
+            int remaining = this.owner.getInventory().getEmptySlot() != -1 ? testStack.getCount() : 0;
+            // More accurate check: try to insert and see remainder
+            ItemStack testCopy = testStack.copy();
+            boolean canInsertSome = false;
+            for (int i = 0; i < this.owner.getInventory().size(); i++) {
+                ItemStack playerStack = this.owner.getInventory().getStack(i);
+                if (playerStack.isEmpty()) {
+                    canAccept += testCopy.getCount();
+                    canInsertSome = true;
+                    break;
+                } else if (ItemStack.areItemsEqual(playerStack, testCopy) && playerStack.getCount() < playerStack.getMaxCount()) {
+                    int canFit = playerStack.getMaxCount() - playerStack.getCount();
+                    int willTake = Math.min(canFit, testCopy.getCount());
+                    canAccept += willTake;
+                    testCopy.decrement(willTake);
+                    if (testCopy.isEmpty()) {
+                        canInsertSome = true;
+                        break;
+                    }
+                }
+            }
+            if (!testCopy.isEmpty() && this.owner.getInventory().getEmptySlot() != -1) {
+                canAccept += testCopy.getCount();
+            }
+            if (canAccept >= toGiveCount) break;
+        }
+
+        if (canAccept == 0) {
+            return GiveResult.FULL;
+        }
+
+        // Actually give the items
+        int remainingToGive = Math.min(toGiveCount, canAccept);
+        int givenCount = 0;
+
+        for (int slot : matchingSlots) {
+            if (remainingToGive <= 0) break;
+
+            ItemStack stack = inventory.getStack(slot);
+            int takeFromThis = Math.min(remainingToGive, stack.getCount());
+
+            ItemStack toGive = stack.copy();
+            toGive.setCount(takeFromThis);
+
+            if (this.owner.getInventory().insertStack(toGive)) {
+                givenCount += takeFromThis;
+                remainingToGive -= takeFromThis;
+                stack.decrement(takeFromThis);
+                if (stack.isEmpty()) {
+                    inventory.setStack(slot, ItemStack.EMPTY);
+                }
+            }
+        }
+
+        if (givenCount == 0) {
+            return GiveResult.FULL;
+        } else if (givenCount < toGiveCount) {
+            return GiveResult.PARTIAL;
+        } else {
+            return GiveResult.SUCCESS;
+        }
+    }
+
+    /**
+     * Give multiple items to the owner at once.
+     * @param requests List of ItemRequest objects specifying items and quantities
+     * @return MultiGiveResult with details of what was given, failed, or not found
+     */
+    public MultiGiveResult giveItems(List<ItemRequest> requests) {
+        MultiGiveResult result = new MultiGiveResult();
+
+        if (this.owner == null || this.inventory.isEmpty()) {
+            for (ItemRequest request : requests) {
+                result.notFoundItems.add(request.itemName);
+            }
+            return result;
+        }
+
+        for (ItemRequest request : requests) {
+            // IMPORTANT: Get the count BEFORE giving the item (for "give all" case)
+            int countBeforeGiving = getTotalCountOfItem(request.itemName);
+            
+            GiveResult giveResult = giveSpecificItem(request.itemName, request.quantity);
+
+            // Track results - use the count we got BEFORE giving
+            switch (giveResult) {
+                case SUCCESS:
+                    // For "give all" (null quantity), use the count we had before giving
+                    // For specific quantity, use the requested quantity
+                    int givenCount = request.quantity != null ? request.quantity : countBeforeGiving;
+                    result.givenItems.put(request.itemName, givenCount);
+                    break;
+                case PARTIAL:
+                    // Partial success - some items were given (player inventory was partially full)
+                    // Use countBeforeGiving for "give all" case since we don't know exact amount
+                    result.givenItems.put(request.itemName, request.quantity != null ? request.quantity : countBeforeGiving);
+                    break;
+                case FULL:
+                    result.failedItems.put(request.itemName, request.quantity != null ? request.quantity : countBeforeGiving);
+                    break;
+                case NOT_FOUND:
+                    result.notFoundItems.add(request.itemName);
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get the total count of a specific item in the inventory.
+     */
+    private int getTotalCountOfItem(String itemName) {
+        int count = 0;
+        for (int i = 0; i < inventory.size(); i++) {
+            ItemStack stack = inventory.getStack(i);
+            if (!stack.isEmpty()) {
+                String stackName = stack.getName().getString();
+                if (stackName.equalsIgnoreCase(itemName) || stackName.toLowerCase().contains(itemName.toLowerCase())) {
+                    count += stack.getCount();
+                }
+            }
+        }
+        return count;
     }
 
     public PlayerEntity getOwner() { return this.owner; }
