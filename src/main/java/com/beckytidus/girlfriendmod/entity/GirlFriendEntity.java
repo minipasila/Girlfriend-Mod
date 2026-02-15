@@ -1,6 +1,10 @@
 package com.beckytidus.girlfriendmod.entity;
 
 import com.beckytidus.girlfriendmod.ai.AIClientManager;
+import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager;
+import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager.BlockCategory;
+import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager.DetectedBlock;
+import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager.ScanResult;
 import com.beckytidus.girlfriendmod.ai.ChutesClient;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
 import com.beckytidus.girlfriendmod.ai.RelationshipManager;
@@ -106,6 +110,14 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     private static final long BIOME_CHECK_INTERVAL = 2000; // Check every 2 seconds
     private static final long BIOME_REACTION_COOLDOWN = 30000; // 30 seconds between biome reactions
     private long lastBiomeReactionTime = 0;
+
+    // Block awareness system
+    private ScanResult lastBlockScanResult = null;
+    private String currentBlockSummary = "";
+    private long lastBlockCheckTime = 0;
+    private static final long BLOCK_CHECK_INTERVAL = 3000; // Check every 3 seconds
+    private static final long BLOCK_REACTION_COOLDOWN = 20000; // 20 seconds between block reactions
+    private long lastBlockReactionTime = 0;
 
     private String playerCustomName = "";
 
@@ -522,6 +534,76 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         // Generate reaction to entering new biome
         String prompt = name + " just walked from " + oldBiome + " into " + newBiome + 
             ". React briefly to the new environment - notice the change in scenery, temperature, or atmosphere.";
+        generateAndSayResponse(prompt);
+    }
+
+    // --- Block Awareness System ---
+    private void tickBlockAwareness() {
+        if (this.isKnockedOut) return;
+        if (this.getEntityWorld().isClient()) return;
+        if (!ModConfig.get().enableAI) return;
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastBlockCheckTime < BLOCK_CHECK_INTERVAL) return;
+
+        lastBlockCheckTime = currentTime;
+
+        // Scan for nearby interesting blocks
+        ScanResult scanResult = BlockAwarenessManager.scanBlocks(
+            this.getEntityWorld(), 
+            this.getBlockPos(), 
+            lastBlockScanResult
+        );
+
+        // Update the block summary for context
+        this.currentBlockSummary = scanResult.summary;
+        this.lastBlockScanResult = scanResult;
+
+        // Check if we should react to new blocks
+        boolean canReact = currentTime - lastBlockReactionTime >= BLOCK_REACTION_COOLDOWN &&
+                          !isGeneratingResponse &&
+                          currentTime - lastPhraseTime >= SPEECH_COOLDOWN;
+
+        if (canReact && scanResult.hasChanges && !scanResult.highPriorityBlocks.isEmpty()) {
+            // Filter to only blocks that are newly discovered (in changed categories)
+            List<DetectedBlock> newBlocks = new ArrayList<>();
+            for (DetectedBlock block : scanResult.highPriorityBlocks) {
+                if (scanResult.changedCategories.contains(block.category)) {
+                    newBlocks.add(block);
+                }
+            }
+
+            if (!newBlocks.isEmpty()) {
+                // Chance to react based on block type
+                boolean hasHighValue = newBlocks.stream().anyMatch(db -> BlockAwarenessManager.isHighValueOre(db.block));
+                float reactionChance = hasHighValue ? 0.60f : 0.25f; // Higher chance for diamonds/emeralds
+
+                if (this.random.nextFloat() < reactionChance) {
+                    triggerBlockReaction(newBlocks);
+                    lastBlockReactionTime = currentTime;
+                }
+            }
+        }
+    }
+
+    private void triggerBlockReaction(List<DetectedBlock> newBlocks) {
+        if (!ModConfig.get().enableAI || isKnockedOut) return;
+
+        String name = getNameForContext();
+        String prompt = BlockAwarenessManager.generateReactionPrompt(newBlocks, name);
+
+        if (prompt == null) return;
+
+        // Add block discovery event to history
+        StringBuilder eventBuilder = new StringBuilder(name + " discovered ");
+        eventBuilder.append(newBlocks.stream()
+            .limit(3)
+            .map(db -> db.displayName)
+            .reduce((a, b) -> a + ", " + b)
+            .orElse("interesting blocks"));
+        eventBuilder.append(".");
+        getMemory().addMessage("system", eventBuilder.toString());
+
         generateAndSayResponse(prompt);
     }
 
@@ -1222,6 +1304,11 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             sb.append("Current Biome: ").append(this.currentBiomeName).append(". ");
         }
 
+        // Add nearby interesting blocks if any were detected
+        if (!this.currentBlockSummary.isEmpty()) {
+            sb.append("Nearby Blocks: ").append(this.currentBlockSummary).append(". ");
+        }
+
         return sb.toString();
     }
 
@@ -1802,6 +1889,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 tickCombatLogic();
                 tickMobAwareness();
                 tickBiomeAwareness(); // Biome change detection
+                tickBlockAwareness(); // Block detection
                 tickAutoHealOwner();
             }
             if (this.age % 40 == 0) tickAutoEat();
