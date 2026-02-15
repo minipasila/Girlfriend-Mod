@@ -23,6 +23,13 @@ import java.util.List;
 public class AIConfigScreen extends Screen {
     private final Screen parent;
 
+    // API Key Masking
+    private static final String MASKED_KEY = "********";
+    private String originalChutesApiKey = "";
+    private String originalOpenRouterApiKey = "";
+    private boolean chutesKeyEdited = false;
+    private boolean openRouterKeyEdited = false;
+
     // Configuration Widgets
     private TextFieldWidget chutesApiKeyField;
     private TextFieldWidget chutesModelField;
@@ -79,11 +86,15 @@ public class AIConfigScreen extends Screen {
         addRow(providerButton);
 
         // 2. Chutes AI Fields
-        addLabelAndField(centerX, "Chutes API Key:", config.chutesApiKey, w -> chutesApiKeyField = w, chutesWidgets);
+        originalChutesApiKey = config.chutesApiKey != null ? config.chutesApiKey : "";
+        chutesKeyEdited = false;
+        addApiKeyField(centerX, "Chutes API Key:", originalChutesApiKey, w -> chutesApiKeyField = w, chutesWidgets, () -> chutesKeyEdited = true);
         addLabelAndField(centerX, "Chutes Model:", config.chutesModelName, w -> chutesModelField = w, chutesWidgets);
 
         // 3. OpenRouter Fields
-        addLabelAndField(centerX, "OpenRouter API Key:", config.openRouterApiKey, w -> openRouterApiKeyField = w, openRouterWidgets);
+        originalOpenRouterApiKey = config.openRouterApiKey != null ? config.openRouterApiKey : "";
+        openRouterKeyEdited = false;
+        addApiKeyField(centerX, "OpenRouter API Key:", originalOpenRouterApiKey, w -> openRouterApiKeyField = w, openRouterWidgets, () -> openRouterKeyEdited = true);
         addLabelAndField(centerX, "OpenRouter Model:", config.openRouterModelName, w -> openRouterModelField = w, openRouterWidgets);
 
         // 4. KoboldCpp Fields
@@ -143,6 +154,35 @@ public class AIConfigScreen extends Screen {
         field.setText(defaultValue);
         fieldSetter.accept(field);
 
+        if (categoryList != null) {
+            categoryList.add(label);
+            categoryList.add(field);
+        }
+
+        addRow(label);
+        addRow(field);
+    }
+
+    private void addApiKeyField(int centerX, String labelText, String originalKey, java.util.function.Consumer<TextFieldWidget> fieldSetter, List<ClickableWidget> categoryList, Runnable onEdited) {
+        ButtonWidget label = createLabel(centerX, labelText);
+
+        final TextFieldWidget field = new TextFieldWidget(this.textRenderer, centerX - 100, 0, 200, 18, Text.literal(labelText));
+        field.setMaxLength(256);
+        
+        // Show masked value if there's an existing key, otherwise show empty
+        final boolean hasExistingKey = originalKey != null && !originalKey.isEmpty();
+        if (hasExistingKey) {
+            field.setText(MASKED_KEY);
+        } else {
+            field.setText("");
+        }
+        fieldSetter.accept(field);
+
+        // Track when the field is edited
+        field.setChangedListener(newText -> {
+            onEdited.run();
+        });
+        
         if (categoryList != null) {
             categoryList.add(label);
             categoryList.add(field);
@@ -308,9 +348,22 @@ public class AIConfigScreen extends Screen {
         ModConfig config = ModConfig.get();
 
         config.aiProvider = ModConfig.AIProvider.values()[currentProviderIndex];
-        config.chutesApiKey = chutesApiKeyField.getText();
+        
+        // Handle API key fields - use original key if field still shows masked value
+        String chutesKey = chutesApiKeyField.getText();
+        if (chutesKey.equals(MASKED_KEY) || chutesKey.isEmpty()) {
+            config.chutesApiKey = originalChutesApiKey;
+        } else {
+            config.chutesApiKey = chutesKey;
+        }
         config.chutesModelName = chutesModelField.getText();
-        config.openRouterApiKey = openRouterApiKeyField.getText();
+        
+        String openRouterKey = openRouterApiKeyField.getText();
+        if (openRouterKey.equals(MASKED_KEY) || openRouterKey.isEmpty()) {
+            config.openRouterApiKey = originalOpenRouterApiKey;
+        } else {
+            config.openRouterApiKey = openRouterKey;
+        }
         config.openRouterModelName = openRouterModelField.getText();
         config.koboldCppUrl = koboldCppUrlField.getText();
         config.koboldCppModel = koboldCppModelField.getText();
