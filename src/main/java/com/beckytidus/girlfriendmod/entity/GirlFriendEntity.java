@@ -5,6 +5,7 @@ import com.beckytidus.girlfriendmod.ai.ChutesClient;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
 import com.beckytidus.girlfriendmod.ai.RelationshipManager;
 import com.beckytidus.girlfriendmod.config.ModConfig;
+import net.minecraft.advancement.AdvancementFrame;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.DoorBlock;
 import net.minecraft.block.TrapdoorBlock;
@@ -1434,6 +1435,48 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         getMemory().addMessage("system", name + "'s owner respawned.");
 
         generateAndSayResponse(name + "'s owner has just respawned/came back to life. " + name + " is teleported to them. Express joy and relief that they are okay.");
+    }
+
+    /**
+     * Called when the owner earns an advancement/achievement.
+     * @param title The display title of the advancement
+     * @param frame The type of advancement (task, goal, or challenge)
+     */
+    public void onOwnerAdvancement(String title, AdvancementFrame frame) {
+        if (!ModConfig.get().enableAI || isKnockedOut) return;
+
+        // Don't interrupt if already speaking recently
+        if (isGeneratingResponse || System.currentTimeMillis() - lastPhraseTime < SPEECH_COOLDOWN) return;
+
+        String name = getNameForContext();
+        String frameName = frame.asString();
+
+        // Add advancement event to history
+        String advancementEvent = name + "'s owner earned the " + frameName + " advancement: " + title + ".";
+        getMemory().addMessage("system", advancementEvent);
+
+        // Update context
+        updateGameContext("Owner earned " + frameName + ": " + title);
+
+        // Generate contextual reaction based on advancement type
+        String prompt;
+        switch (frame) {
+            case CHALLENGE:
+                // Challenges are difficult achievements - very excited reaction
+                prompt = name + "'s owner just completed the challenge \"" + title + "\"! This is a major difficult achievement. React with extreme excitement, pride, and celebration! This is a big deal!";
+                break;
+            case GOAL:
+                // Goals are significant milestones - enthusiastic reaction
+                prompt = name + "'s owner just achieved the goal \"" + title + "\"! React with enthusiasm and congratulations. This is a meaningful milestone!";
+                break;
+            case TASK:
+            default:
+                // Tasks are common achievements - casual positive reaction
+                prompt = name + "'s owner just completed the task \"" + title + "\". React with casual congratulations or acknowledgment.";
+                break;
+        }
+
+        generateAndSayResponse(prompt);
     }
 
     // --- Standard Methods ---

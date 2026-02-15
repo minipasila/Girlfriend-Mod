@@ -3,7 +3,8 @@
 	"package": "com.beckytidus.girlfriendmod.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"ExampleMixin"
+		"ExampleMixin",
+		"PlayerAdvancementTrackerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
