@@ -36,7 +36,8 @@ public class BlockAwarenessManager {
         WATER("water", true, false),
         LAVA("lava", true, true),
         PORTAL("portal", false, true),
-        VILLAGE_STRUCTURES("village structures", false, false);
+        VILLAGE_STRUCTURES("village structures", false, false),
+        NATURAL_FEATURES("natural features", true, false);
 
         public final String displayName;
         public final boolean canGroup; // Can show as "3x Flowers"
@@ -562,6 +563,129 @@ public class BlockAwarenessManager {
         addBlock(Blocks.BOOKSHELF, BlockCategory.HOUSING, "Bookshelf");
         addBlock(Blocks.CHISELED_BOOKSHELF, BlockCategory.HOUSING, "Chiseled Bookshelf");
         // Note: Paintings, Item Frames, and Armor Stands are entities, not blocks
+
+        // === NATURAL_FEATURES - Farm Crops ===
+        addBlock(Blocks.WHEAT, BlockCategory.NATURAL_FEATURES, "Wheat");
+        addBlock(Blocks.CARROTS, BlockCategory.NATURAL_FEATURES, "Carrots");
+        addBlock(Blocks.POTATOES, BlockCategory.NATURAL_FEATURES, "Potatoes");
+        addBlock(Blocks.BEETROOTS, BlockCategory.NATURAL_FEATURES, "Beetroots");
+        addBlock(Blocks.PUMPKIN, BlockCategory.NATURAL_FEATURES, "Pumpkin");
+        addBlock(Blocks.CARVED_PUMPKIN, BlockCategory.NATURAL_FEATURES, "Carved Pumpkin");
+        addBlock(Blocks.JACK_O_LANTERN, BlockCategory.NATURAL_FEATURES, "Jack o'Lantern");
+        addBlock(Blocks.PUMPKIN_STEM, BlockCategory.NATURAL_FEATURES, "Pumpkin Stem");
+        addBlock(Blocks.ATTACHED_PUMPKIN_STEM, BlockCategory.NATURAL_FEATURES, "Pumpkin Stem");
+        addBlock(Blocks.MELON, BlockCategory.NATURAL_FEATURES, "Melon");
+        addBlock(Blocks.MELON_STEM, BlockCategory.NATURAL_FEATURES, "Melon Stem");
+        addBlock(Blocks.ATTACHED_MELON_STEM, BlockCategory.NATURAL_FEATURES, "Melon Stem");
+        addBlock(Blocks.SUGAR_CANE, BlockCategory.NATURAL_FEATURES, "Sugar Cane");
+        addBlock(Blocks.BAMBOO, BlockCategory.NATURAL_FEATURES, "Bamboo");
+        addBlock(Blocks.BAMBOO_SAPLING, BlockCategory.NATURAL_FEATURES, "Bamboo Sapling");
+        addBlock(Blocks.FARMLAND, BlockCategory.NATURAL_FEATURES, "Farmland");
+        // Sweet Berry Bush and Cactus are already in DANGEROUS, but also add to NATURAL_FEATURES for context
+        // Note: A block can only have one category, so we keep them in DANGEROUS since they can hurt you
+
+        // === NATURAL_FEATURES - Mushrooms & Fungi ===
+        addBlock(Blocks.BROWN_MUSHROOM, BlockCategory.NATURAL_FEATURES, "Brown Mushroom");
+        addBlock(Blocks.RED_MUSHROOM, BlockCategory.NATURAL_FEATURES, "Red Mushroom");
+        addBlock(Blocks.BROWN_MUSHROOM_BLOCK, BlockCategory.NATURAL_FEATURES, "Brown Mushroom Block");
+        addBlock(Blocks.RED_MUSHROOM_BLOCK, BlockCategory.NATURAL_FEATURES, "Red Mushroom Block");
+        addBlock(Blocks.MUSHROOM_STEM, BlockCategory.NATURAL_FEATURES, "Mushroom Stem");
+        addBlock(Blocks.CRIMSON_FUNGUS, BlockCategory.NATURAL_FEATURES, "Crimson Fungus");
+        addBlock(Blocks.WARPED_FUNGUS, BlockCategory.NATURAL_FEATURES, "Warped Fungus");
+        addBlock(Blocks.CRIMSON_ROOTS, BlockCategory.NATURAL_FEATURES, "Crimson Roots");
+        addBlock(Blocks.WARPED_ROOTS, BlockCategory.NATURAL_FEATURES, "Warped Roots");
+        addBlock(Blocks.NETHER_WART, BlockCategory.NATURAL_FEATURES, "Nether Wart");
+
+        // === NATURAL_FEATURES - Tree Saplings ===
+        addBlock(Blocks.OAK_SAPLING, BlockCategory.NATURAL_FEATURES, "Oak Sapling");
+        addBlock(Blocks.SPRUCE_SAPLING, BlockCategory.NATURAL_FEATURES, "Spruce Sapling");
+        addBlock(Blocks.BIRCH_SAPLING, BlockCategory.NATURAL_FEATURES, "Birch Sapling");
+        addBlock(Blocks.JUNGLE_SAPLING, BlockCategory.NATURAL_FEATURES, "Jungle Sapling");
+        addBlock(Blocks.ACACIA_SAPLING, BlockCategory.NATURAL_FEATURES, "Acacia Sapling");
+        addBlock(Blocks.DARK_OAK_SAPLING, BlockCategory.NATURAL_FEATURES, "Dark Oak Sapling");
+        addBlock(Blocks.CHERRY_SAPLING, BlockCategory.NATURAL_FEATURES, "Cherry Sapling");
+        addBlock(Blocks.MANGROVE_PROPAGULE, BlockCategory.NATURAL_FEATURES, "Mangrove Propagule");
+        addBlock(Blocks.PALE_OAK_SAPLING, BlockCategory.NATURAL_FEATURES, "Pale Oak Sapling");
+
+        // === NATURAL_FEATURES - Tree Leaves ===
+        addBlock(Blocks.OAK_LEAVES, BlockCategory.NATURAL_FEATURES, "Oak Leaves");
+        addBlock(Blocks.SPRUCE_LEAVES, BlockCategory.NATURAL_FEATURES, "Spruce Leaves");
+        addBlock(Blocks.BIRCH_LEAVES, BlockCategory.NATURAL_FEATURES, "Birch Leaves");
+        addBlock(Blocks.JUNGLE_LEAVES, BlockCategory.NATURAL_FEATURES, "Jungle Leaves");
+        addBlock(Blocks.ACACIA_LEAVES, BlockCategory.NATURAL_FEATURES, "Acacia Leaves");
+        addBlock(Blocks.DARK_OAK_LEAVES, BlockCategory.NATURAL_FEATURES, "Dark Oak Leaves");
+        addBlock(Blocks.CHERRY_LEAVES, BlockCategory.NATURAL_FEATURES, "Cherry Leaves");
+        addBlock(Blocks.MANGROVE_LEAVES, BlockCategory.NATURAL_FEATURES, "Mangrove Leaves");
+        addBlock(Blocks.PALE_OAK_LEAVES, BlockCategory.NATURAL_FEATURES, "Pale Oak Leaves");
+        addBlock(Blocks.AZALEA_LEAVES, BlockCategory.NATURAL_FEATURES, "Azalea Leaves");
+        // Note: FLOWERING_AZALEA and FLOWERING_AZALEA_LEAVES are already in FLOWERS
+
+        // === NATURAL_FEATURES - Ocean Features ===
+        addBlock(Blocks.SEA_PICKLE, BlockCategory.NATURAL_FEATURES, "Sea Pickle");
+        addBlock(Blocks.SEAGRASS, BlockCategory.NATURAL_FEATURES, "Seagrass");
+        addBlock(Blocks.TALL_SEAGRASS, BlockCategory.NATURAL_FEATURES, "Tall Seagrass");
+        addBlock(Blocks.KELP, BlockCategory.NATURAL_FEATURES, "Kelp");
+        addBlock(Blocks.KELP_PLANT, BlockCategory.NATURAL_FEATURES, "Kelp");
+        // Coral
+        addBlock(Blocks.TUBE_CORAL, BlockCategory.NATURAL_FEATURES, "Tube Coral");
+        addBlock(Blocks.BRAIN_CORAL, BlockCategory.NATURAL_FEATURES, "Brain Coral");
+        addBlock(Blocks.BUBBLE_CORAL, BlockCategory.NATURAL_FEATURES, "Bubble Coral");
+        addBlock(Blocks.FIRE_CORAL, BlockCategory.NATURAL_FEATURES, "Fire Coral");
+        addBlock(Blocks.HORN_CORAL, BlockCategory.NATURAL_FEATURES, "Horn Coral");
+        // Coral Fans
+        addBlock(Blocks.TUBE_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Tube Coral Fan");
+        addBlock(Blocks.BRAIN_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Brain Coral Fan");
+        addBlock(Blocks.BUBBLE_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Bubble Coral Fan");
+        addBlock(Blocks.FIRE_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Fire Coral Fan");
+        addBlock(Blocks.HORN_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Horn Coral Fan");
+        // Dead Coral
+        addBlock(Blocks.DEAD_TUBE_CORAL, BlockCategory.NATURAL_FEATURES, "Dead Tube Coral");
+        addBlock(Blocks.DEAD_BRAIN_CORAL, BlockCategory.NATURAL_FEATURES, "Dead Brain Coral");
+        addBlock(Blocks.DEAD_BUBBLE_CORAL, BlockCategory.NATURAL_FEATURES, "Dead Bubble Coral");
+        addBlock(Blocks.DEAD_FIRE_CORAL, BlockCategory.NATURAL_FEATURES, "Dead Fire Coral");
+        addBlock(Blocks.DEAD_HORN_CORAL, BlockCategory.NATURAL_FEATURES, "Dead Horn Coral");
+        addBlock(Blocks.DEAD_TUBE_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Dead Tube Coral Fan");
+        addBlock(Blocks.DEAD_BRAIN_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Dead Brain Coral Fan");
+        addBlock(Blocks.DEAD_BUBBLE_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Dead Bubble Coral Fan");
+        addBlock(Blocks.DEAD_FIRE_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Dead Fire Coral Fan");
+        addBlock(Blocks.DEAD_HORN_CORAL_FAN, BlockCategory.NATURAL_FEATURES, "Dead Horn Coral Fan");
+
+        // === NATURAL_FEATURES - Nether Features ===
+        addBlock(Blocks.CRIMSON_NYLIUM, BlockCategory.NATURAL_FEATURES, "Crimson Nylium");
+        addBlock(Blocks.WARPED_NYLIUM, BlockCategory.NATURAL_FEATURES, "Warped Nylium");
+        addBlock(Blocks.NETHERRACK, BlockCategory.NATURAL_FEATURES, "Netherrack");
+        addBlock(Blocks.BASALT, BlockCategory.NATURAL_FEATURES, "Basalt");
+        addBlock(Blocks.POLISHED_BASALT, BlockCategory.NATURAL_FEATURES, "Polished Basalt");
+        addBlock(Blocks.SMOOTH_BASALT, BlockCategory.NATURAL_FEATURES, "Smooth Basalt");
+        addBlock(Blocks.BLACKSTONE, BlockCategory.NATURAL_FEATURES, "Blackstone");
+        addBlock(Blocks.GLOWSTONE, BlockCategory.NATURAL_FEATURES, "Glowstone");
+        // Note: SHROOMLIGHT is already in HOUSING/Lighting
+        addBlock(Blocks.WEEPING_VINES, BlockCategory.NATURAL_FEATURES, "Weeping Vines");
+        addBlock(Blocks.WEEPING_VINES_PLANT, BlockCategory.NATURAL_FEATURES, "Weeping Vines");
+        addBlock(Blocks.TWISTING_VINES, BlockCategory.NATURAL_FEATURES, "Twisting Vines");
+        addBlock(Blocks.TWISTING_VINES_PLANT, BlockCategory.NATURAL_FEATURES, "Twisting Vines");
+
+        // === NATURAL_FEATURES - End Features ===
+        addBlock(Blocks.CHORUS_PLANT, BlockCategory.NATURAL_FEATURES, "Chorus Plant");
+        // Note: CHORUS_FLOWER is already in FLOWERS
+        addBlock(Blocks.END_STONE, BlockCategory.NATURAL_FEATURES, "End Stone");
+
+        // === NATURAL_FEATURES - Other Natural Plants ===
+        addBlock(Blocks.VINE, BlockCategory.NATURAL_FEATURES, "Vines");
+        addBlock(Blocks.LILY_PAD, BlockCategory.NATURAL_FEATURES, "Lily Pad");
+        addBlock(Blocks.DEAD_BUSH, BlockCategory.NATURAL_FEATURES, "Dead Bush");
+        addBlock(Blocks.FERN, BlockCategory.NATURAL_FEATURES, "Fern");
+        addBlock(Blocks.LARGE_FERN, BlockCategory.NATURAL_FEATURES, "Large Fern");
+        addBlock(Blocks.TALL_GRASS, BlockCategory.NATURAL_FEATURES, "Tall Grass");
+        addBlock(Blocks.SHORT_GRASS, BlockCategory.NATURAL_FEATURES, "Grass");
+        addBlock(Blocks.HANGING_ROOTS, BlockCategory.NATURAL_FEATURES, "Hanging Roots");
+        addBlock(Blocks.SPORE_BLOSSOM, BlockCategory.NATURAL_FEATURES, "Spore Blossom");
+        addBlock(Blocks.BIG_DRIPLEAF, BlockCategory.NATURAL_FEATURES, "Big Dripleaf");
+        addBlock(Blocks.BIG_DRIPLEAF_STEM, BlockCategory.NATURAL_FEATURES, "Big Dripleaf Stem");
+        addBlock(Blocks.SMALL_DRIPLEAF, BlockCategory.NATURAL_FEATURES, "Small Dripleaf");
+        addBlock(Blocks.MOSS_BLOCK, BlockCategory.NATURAL_FEATURES, "Moss Block");
+        addBlock(Blocks.MOSS_CARPET, BlockCategory.NATURAL_FEATURES, "Moss Carpet");
+        addBlock(Blocks.PINK_PETALS, BlockCategory.NATURAL_FEATURES, "Pink Petals");
     }
 
     private static void addBlock(Block block, BlockCategory category, String displayName) {
@@ -892,7 +1016,109 @@ public class BlockAwarenessManager {
             case LAVA, DANGEROUS -> girlfriendName + " noticed " + mostInteresting.displayName + " " + location + ". Warn the player to be careful!";
             case PORTAL -> girlfriendName + " sees a " + mostInteresting.displayName + " " + location + ". React with wonder or curiosity.";
             case WATER -> null; // Don't react to water
+            case NATURAL_FEATURES -> generateNaturalFeatureReaction(mostInteresting, girlfriendName, location);
             default -> girlfriendName + " noticed " + mostInteresting.displayName + " " + location + ". Briefly acknowledge it.";
         };
+    }
+
+    /**
+     * Generate a reaction prompt for natural feature blocks.
+     */
+    private static String generateNaturalFeatureReaction(DetectedBlock block, String girlfriendName, String location) {
+        // Farm crops
+        if (block.block == Blocks.WHEAT || block.block == Blocks.CARROTS || 
+            block.block == Blocks.POTATOES || block.block == Blocks.BEETROOTS) {
+            return girlfriendName + " notices a farm with " + block.displayName + " growing " + location + ". Comment positively on the farming efforts.";
+        }
+        if (block.block == Blocks.PUMPKIN || block.block == Blocks.MELON) {
+            return girlfriendName + " spots a " + block.displayName + " " + location + ". React with mild interest at the grown produce.";
+        }
+        if (block.block == Blocks.FARMLAND) {
+            return girlfriendName + " sees tilled farmland " + location + ". Acknowledge the prepared farming area.";
+        }
+        if (block.block == Blocks.SUGAR_CANE) {
+            return girlfriendName + " notices Sugar Cane growing " + location + ". Briefly mention it could be useful for paper or sugar.";
+        }
+        if (block.block == Blocks.BAMBOO) {
+            return girlfriendName + " sees tall Bamboo " + location + ". Comment on how useful bamboo can be.";
+        }
+        
+        // Mushrooms
+        if (block.block == Blocks.BROWN_MUSHROOM || block.block == Blocks.RED_MUSHROOM) {
+            return girlfriendName + " spotted a " + block.displayName + " " + location + ". React with mild curiosity about the fungi.";
+        }
+        if (block.block == Blocks.CRIMSON_FUNGUS || block.block == Blocks.WARPED_FUNGUS) {
+            return girlfriendName + " notices a strange " + block.displayName + " " + location + ". React with curiosity about this Nether fungus.";
+        }
+        if (block.block == Blocks.NETHER_WART) {
+            return girlfriendName + " sees Nether Wart growing " + location + ". Acknowledge this valuable brewing ingredient.";
+        }
+        
+        // Trees
+        if (block.displayName.contains("Sapling") || block.displayName.contains("Propagule")) {
+            return girlfriendName + " notices a " + block.displayName + " " + location + ". Comment on how it will grow into a tree someday.";
+        }
+        if (block.displayName.contains("Leaves")) {
+            return girlfriendName + " sees " + block.displayName + " " + location + ". Appreciate the natural beauty of the tree.";
+        }
+        
+        // Ocean features
+        if (block.block == Blocks.SEA_PICKLE) {
+            return girlfriendName + " spots Sea Pickles " + location + ". Comment on their soft glow underwater.";
+        }
+        if (block.block == Blocks.SEAGRASS || block.block == Blocks.TALL_SEAGRASS) {
+            return girlfriendName + " notices Seagrass swaying " + location + ". Briefly appreciate the underwater flora.";
+        }
+        if (block.block == Blocks.KELP || block.block == Blocks.KELP_PLANT) {
+            return girlfriendName + " sees Kelp growing " + location + ". Mention it could be dried for food.";
+        }
+        if (block.displayName.contains("Coral") && !block.displayName.contains("Dead")) {
+            return girlfriendName + " spots colorful " + block.displayName + " " + location + ". React with appreciation for the beautiful ocean coral.";
+        }
+        if (block.displayName.contains("Dead Coral")) {
+            return girlfriendName + " notices dead coral " + location + ". Express mild sadness that it's no longer alive.";
+        }
+        
+        // Nether features
+        if (block.block == Blocks.CRIMSON_NYLIUM || block.block == Blocks.WARPED_NYLIUM) {
+            return girlfriendName + " walks on " + block.displayName + " " + location + ". Comment on the strange Nether ground.";
+        }
+        if (block.block == Blocks.GLOWSTONE) {
+            return girlfriendName + " sees the warm glow of Glowstone " + location + ". Appreciate the light in the darkness.";
+        }
+        if (block.block == Blocks.WEEPING_VINES || block.block == Blocks.TWISTING_VINES) {
+            return girlfriendName + " notices " + block.displayName + " hanging " + location + ". Comment on the strange Nether plants.";
+        }
+        if (block.block == Blocks.BASALT || block.block == Blocks.POLISHED_BASALT || block.block == Blocks.SMOOTH_BASALT) {
+            return girlfriendName + " sees " + block.displayName + " " + location + ". Note the volcanic rock of the Nether.";
+        }
+        
+        // End features
+        if (block.block == Blocks.CHORUS_PLANT) {
+            return girlfriendName + " notices a Chorus Plant " + location + ". React with curiosity about this End-dimension flora.";
+        }
+        if (block.block == Blocks.END_STONE) {
+            return girlfriendName + " walks on the strange yellow End Stone " + location + ". Comment on the alien feeling of this dimension.";
+        }
+        
+        // Other natural plants
+        if (block.block == Blocks.LILY_PAD) {
+            return girlfriendName + " sees Lily Pads floating " + location + ". Appreciate the peaceful water plants.";
+        }
+        if (block.block == Blocks.VINE) {
+            return girlfriendName + " notices Vines hanging " + location + ". Comment on the natural greenery.";
+        }
+        if (block.block == Blocks.MOSS_BLOCK || block.block == Blocks.MOSS_CARPET) {
+            return girlfriendName + " feels the soft " + block.displayName + " " + location + ". Appreciate the lush green moss.";
+        }
+        if (block.block == Blocks.BIG_DRIPLEAF || block.block == Blocks.SMALL_DRIPLEAF) {
+            return girlfriendName + " sees " + block.displayName + " " + location + ". Comment on the interesting cave plant.";
+        }
+        if (block.block == Blocks.SPORE_BLOSSOM) {
+            return girlfriendName + " admires the Spore Blossom " + location + ". React with wonder at the beautiful particles.";
+        }
+        
+        // Default for other natural features
+        return girlfriendName + " notices " + block.displayName + " " + location + ". Briefly acknowledge the natural surroundings.";
     }
 }
