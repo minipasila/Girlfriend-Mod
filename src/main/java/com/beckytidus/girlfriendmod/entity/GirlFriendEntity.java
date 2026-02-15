@@ -5,6 +5,9 @@ import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager;
 import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager.BlockCategory;
 import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager.DetectedBlock;
 import com.beckytidus.girlfriendmod.ai.BlockAwarenessManager.ScanResult;
+import com.beckytidus.girlfriendmod.ai.EntityAwarenessManager;
+import com.beckytidus.girlfriendmod.ai.EntityAwarenessManager.DetectedDecoration;
+import com.beckytidus.girlfriendmod.ai.EntityAwarenessManager.EntityCategory;
 import com.beckytidus.girlfriendmod.ai.ChutesClient;
 import com.beckytidus.girlfriendmod.ai.ConversationManager;
 import com.beckytidus.girlfriendmod.ai.RelationshipManager;
@@ -118,6 +121,14 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     private static final long BLOCK_CHECK_INTERVAL = 3000; // Check every 3 seconds
     private static final long BLOCK_REACTION_COOLDOWN = 20000; // 20 seconds between block reactions
     private long lastBlockReactionTime = 0;
+
+    // Decoration entity awareness system (paintings, item frames, armor stands)
+    private EntityAwarenessManager.ScanResult lastEntityScanResult = null;
+    private String currentEntitySummary = "";
+    private long lastEntityCheckTime = 0;
+    private static final long ENTITY_CHECK_INTERVAL = 3000; // Check every 3 seconds
+    private static final long ENTITY_REACTION_COOLDOWN = 25000; // 25 seconds between entity reactions
+    private long lastEntityReactionTime = 0;
 
     private String playerCustomName = "";
 
@@ -601,6 +612,100 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             .map(db -> db.displayName)
             .reduce((a, b) -> a + ", " + b)
             .orElse("interesting blocks"));
+        eventBuilder.append(".");
+        getMemory().addMessage("system", eventBuilder.toString());
+
+        generateAndSayResponse(prompt);
+    }
+
+    // --- Decoration Entity Awareness System (Paintings, Item Frames, Armor Stands) ---
+    private void tickEntityAwareness() {
+        if (this.isKnockedOut) return;
+        if (this.getEntityWorld().isClient()) return;
+        if (!ModConfig.get().enableAI) return;
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastEntityCheckTime < ENTITY_CHECK_INTERVAL) return;
+
+        lastEntityCheckTime = currentTime;
+
+        // Scan for nearby decoration entities
+        EntityAwarenessManager.ScanResult scanResult = EntityAwarenessManager.scanEntities(
+            this.getEntityWorld(),
+            this.getBlockPos(),
+            lastEntityScanResult
+        );
+
+        // Update the entity summary for context
+        this.currentEntitySummary = scanResult.summary;
+        this.lastEntityScanResult = scanResult;
+
+        // Check if we should react to new entities
+        boolean canReact = currentTime - lastEntityReactionTime >= ENTITY_REACTION_COOLDOWN &&
+                          !isGeneratingResponse &&
+                          currentTime - lastPhraseTime >= SPEECH_COOLDOWN;
+
+        if (canReact && scanResult.hasChanges) {
+            // Get all newly detected entities from changed categories
+            List<DetectedDecoration> newEntities = new ArrayList<>();
+            for (DetectedDecoration dd : scanResult.highPriorityEntities) {
+                if (scanResult.changedCategories.contains(dd.category)) {
+                    newEntities.add(dd);
+                }
+            }
+            
+            // Also check other categories for interesting finds
+            for (EntityCategory category : scanResult.entitiesByCategory.keySet()) {
+                if (scanResult.changedCategories.contains(category)) {
+                    List<DetectedDecoration> entities = scanResult.entitiesByCategory.get(category);
+                    for (DetectedDecoration dd : entities) {
+                        if (!newEntities.contains(dd)) {
+                            newEntities.add(dd);
+                        }
+                    }
+                }
+            }
+
+            if (!newEntities.isEmpty()) {
+                // Chance to react
+                float reactionChance = 0.20f; // 20% base chance
+                
+                // Higher chance for armor stands with equipment
+                boolean hasEquippedArmorStand = newEntities.stream()
+                    .anyMatch(dd -> dd.category == EntityCategory.ARMOR_STAND && 
+                                   !dd.displayName.startsWith("Empty"));
+                if (hasEquippedArmorStand) reactionChance = 0.35f;
+
+                // Higher chance for item frames with items
+                boolean hasFilledItemFrame = newEntities.stream()
+                    .anyMatch(dd -> (dd.category == EntityCategory.ITEM_FRAME || 
+                                    dd.category == EntityCategory.GLOW_ITEM_FRAME) && 
+                                   !dd.displayName.startsWith("Empty"));
+                if (hasFilledItemFrame) reactionChance = 0.30f;
+
+                if (this.random.nextFloat() < reactionChance) {
+                    triggerEntityReaction(newEntities);
+                    lastEntityReactionTime = currentTime;
+                }
+            }
+        }
+    }
+
+    private void triggerEntityReaction(List<DetectedDecoration> newEntities) {
+        if (!ModConfig.get().enableAI || isKnockedOut) return;
+
+        String name = getNameForContext();
+        String prompt = EntityAwarenessManager.generateReactionPrompt(newEntities, name);
+
+        if (prompt == null) return;
+
+        // Add entity discovery event to history
+        StringBuilder eventBuilder = new StringBuilder(name + " noticed ");
+        eventBuilder.append(newEntities.stream()
+            .limit(3)
+            .map(dd -> dd.displayName)
+            .reduce((a, b) -> a + ", " + b)
+            .orElse("interesting decorations"));
         eventBuilder.append(".");
         getMemory().addMessage("system", eventBuilder.toString());
 
@@ -1309,6 +1414,11 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             sb.append("Nearby Blocks: ").append(this.currentBlockSummary).append(". ");
         }
 
+        // Add nearby decoration entities if any were detected
+        if (!this.currentEntitySummary.isEmpty()) {
+            sb.append("Nearby Decorations: ").append(this.currentEntitySummary).append(". ");
+        }
+
         return sb.toString();
     }
 
@@ -1890,6 +2000,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 tickMobAwareness();
                 tickBiomeAwareness(); // Biome change detection
                 tickBlockAwareness(); // Block detection
+                tickEntityAwareness(); // Decoration entity detection (paintings, item frames, armor stands)
                 tickAutoHealOwner();
             }
             if (this.age % 40 == 0) tickAutoEat();
