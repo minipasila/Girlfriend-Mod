@@ -11,6 +11,10 @@ import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.block.FenceGateBlock;
 import net.minecraft.block.enums.DoubleBlockHalf;
 import net.minecraft.entity.Entity;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.world.biome.Biome;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.InventoryOwner;
@@ -94,6 +98,13 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     private int lastNeutralCount = 0;
     private long lastMobReactionTime = 0;
     private static final long MOB_REACTION_COOLDOWN = 15000; // 15 seconds between mob reactions
+
+    // Biome awareness system
+    private String currentBiomeName = "";
+    private long lastBiomeCheckTime = 0;
+    private static final long BIOME_CHECK_INTERVAL = 2000; // Check every 2 seconds
+    private static final long BIOME_REACTION_COOLDOWN = 30000; // 30 seconds between biome reactions
+    private long lastBiomeReactionTime = 0;
 
     private String playerCustomName = "";
 
@@ -428,6 +439,89 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         // Update last counts
         lastHostileCount = totalHostile;
         lastNeutralCount = totalNeutral;
+    }
+
+    // --- Biome Awareness System ---
+    private void tickBiomeAwareness() {
+        if (this.isKnockedOut) return;
+        if (this.getEntityWorld().isClient()) return;
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastBiomeCheckTime < BIOME_CHECK_INTERVAL) return;
+
+        lastBiomeCheckTime = currentTime;
+
+        // Get the current biome
+        try {
+            RegistryEntry<Biome> biomeEntry = this.getEntityWorld().getBiome(this.getBlockPos());
+            String newBiomeName = getBiomeDisplayName(biomeEntry);
+
+            // Check if biome has changed
+            if (!newBiomeName.equals(this.currentBiomeName)) {
+                String oldBiomeName = this.currentBiomeName;
+                this.currentBiomeName = newBiomeName;
+
+                // Only react if we had a previous biome (not on first check)
+                boolean canReact = !oldBiomeName.isEmpty() &&
+                                   currentTime - lastBiomeReactionTime >= BIOME_REACTION_COOLDOWN &&
+                                   !isGeneratingResponse &&
+                                   currentTime - lastPhraseTime >= SPEECH_COOLDOWN;
+
+                if (canReact) {
+                    triggerBiomeChangeReaction(oldBiomeName, newBiomeName);
+                    lastBiomeReactionTime = currentTime;
+                }
+            }
+        } catch (Exception e) {
+            // Silently ignore biome detection errors
+        }
+    }
+
+    private String getBiomeDisplayName(RegistryEntry<Biome> biomeEntry) {
+        try {
+            // Try to get the registry key
+            Optional<RegistryKey<Biome>> key = biomeEntry.getKey();
+            if (key.isPresent()) {
+                String biomeId = key.get().getValue().toString();
+                // Convert "minecraft:plains" to "Plains"
+                String name = biomeId.replace("minecraft:", "");
+                // Convert snake_case to Title Case
+                StringBuilder result = new StringBuilder();
+                boolean capitalizeNext = true;
+                for (char c : name.toCharArray()) {
+                    if (c == '_') {
+                        result.append(' ');
+                        capitalizeNext = true;
+                    } else {
+                        if (capitalizeNext) {
+                            result.append(Character.toUpperCase(c));
+                            capitalizeNext = false;
+                        } else {
+                            result.append(c);
+                        }
+                    }
+                }
+                return result.toString();
+            }
+        } catch (Exception e) {
+            // Fall through
+        }
+        return "Unknown";
+    }
+
+    private void triggerBiomeChangeReaction(String oldBiome, String newBiome) {
+        if (!ModConfig.get().enableAI) return;
+
+        String name = getNameForContext();
+
+        // Add biome change event to history
+        String biomeEvent = name + " entered " + newBiome + " biome.";
+        getMemory().addMessage("system", biomeEvent);
+
+        // Generate reaction to entering new biome
+        String prompt = name + " just walked from " + oldBiome + " into " + newBiome + 
+            ". React briefly to the new environment - notice the change in scenery, temperature, or atmosphere.";
+        generateAndSayResponse(prompt);
     }
 
     private void triggerMobSummaryReaction(Map<String, Integer> hostileMobs, Map<String, Integer> neutralMobs, 
@@ -1122,6 +1216,11 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             sb.append("Nearby Mobs: ").append(this.currentMobSummary).append(". ");
         }
 
+        // Add current biome if available
+        if (!this.currentBiomeName.isEmpty()) {
+            sb.append("Current Biome: ").append(this.currentBiomeName).append(". ");
+        }
+
         return sb.toString();
     }
 
@@ -1658,8 +1757,9 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                 pickupNearbyItems();
                 tickTimeAwareness();
                 tickCombatLogic();
-                tickMobAwareness(); // NEW: Add mob awareness check
-                tickAutoHealOwner(); // NEW: Auto-heal owner if relationship is high enough
+                tickMobAwareness();
+                tickBiomeAwareness(); // Biome change detection
+                tickAutoHealOwner();
             }
             if (this.age % 40 == 0) tickAutoEat();
             if (this.age % 100 == 0) tickInventoryManagement();
