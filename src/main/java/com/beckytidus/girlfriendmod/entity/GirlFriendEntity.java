@@ -1036,6 +1036,25 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         }
     }
 
+    /**
+     * Get the cardinal direction the entity is facing.
+     * Minecraft yaw: 0=South, 90=West, 180=North, 270=East
+     */
+    private String getFacingDirection() {
+        float yaw = this.getYaw() % 360;
+        if (yaw < 0) yaw += 360;
+        
+        // Use 8 cardinal directions for more precision
+        if (yaw >= 337.5 || yaw < 22.5) return "South";
+        else if (yaw >= 22.5 && yaw < 67.5) return "Southwest";
+        else if (yaw >= 67.5 && yaw < 112.5) return "West";
+        else if (yaw >= 112.5 && yaw < 157.5) return "Northwest";
+        else if (yaw >= 157.5 && yaw < 202.5) return "North";
+        else if (yaw >= 202.5 && yaw < 247.5) return "Northeast";
+        else if (yaw >= 247.5 && yaw < 292.5) return "East";
+        else return "Southeast"; // 292.5 to 337.5
+    }
+
     private String buildSystemContext(String specificActionContext) {
         StringBuilder sb = new StringBuilder();
         String name = getNameForContext();
@@ -1061,8 +1080,18 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         // Add movement/state information
         sb.append("Current Activity: ").append(this.gameContext).append(". ");
 
-        // Add location/position info if available
+        // Add girlfriend's position and facing direction
+        sb.append(name).append("'s Position: X: ").append(String.format("%.0f", this.getX()))
+          .append(", Y: ").append(String.format("%.0f", this.getY()))
+          .append(", Z: ").append(String.format("%.0f", this.getZ()))
+          .append(". Facing: ").append(getFacingDirection()).append(". ");
+
+        // Add owner's position if available
         if (this.owner != null) {
+            sb.append("Owner's Position: X: ").append(String.format("%.0f", this.owner.getX()))
+              .append(", Y: ").append(String.format("%.0f", this.owner.getY()))
+              .append(", Z: ").append(String.format("%.0f", this.owner.getZ())).append(". ");
+            
             double distance = this.distanceTo(this.owner);
             sb.append("Distance from owner: ").append(String.format("%.1f", distance)).append(" blocks. ");
         }
