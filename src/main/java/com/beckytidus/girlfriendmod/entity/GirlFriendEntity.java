@@ -84,11 +84,16 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     private boolean firstTimeTick = true;
 
     // Mob awareness system
-    private final Set<UUID> reactedMobs = new HashSet<>();
     private long lastMobCheckTime = 0;
     private static final long MOB_CHECK_INTERVAL = 2000; // Check every 2 seconds
     private static final double REACTION_DISTANCE = 12.0; // Distance to detect mobs
-    private static final double REACTION_COOLDOWN_DISTANCE = 20.0; // Distance to clear from reacted set
+    
+    // Track current mob state for context and change detection
+    private String currentMobSummary = "";
+    private int lastHostileCount = 0;
+    private int lastNeutralCount = 0;
+    private long lastMobReactionTime = 0;
+    private static final long MOB_REACTION_COOLDOWN = 15000; // 15 seconds between mob reactions
 
     private String playerCustomName = "";
 
@@ -344,13 +349,6 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
 
         lastMobCheckTime = currentTime;
 
-        // Clear mobs that are far away from reacted set
-        reactedMobs.removeIf(uuid -> {
-            Entity entity = this.getEntityWorld().getEntity(uuid);
-            if (entity == null) return true; // Remove if entity no longer exists
-            return this.distanceTo(entity) > REACTION_COOLDOWN_DISTANCE;
-        });
-
         // Check for nearby mobs
         List<Entity> nearbyMobs = this.getEntityWorld().getOtherEntities(
             this,
@@ -361,45 +359,136 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
                       entity.isAlive()
         );
 
-        if (nearbyMobs.isEmpty()) return;
-
-        // Filter for mobs we haven't reacted to yet
-        List<Entity> newMobs = nearbyMobs.stream()
-            .filter(mob -> !reactedMobs.contains(mob.getUuid()))
-            .collect(Collectors.toList());
-
-        if (newMobs.isEmpty()) return;
-
-        // 33% chance to react to a random new mob
-        if (this.random.nextFloat() < 0.33f) {
-            Entity mobToReact = newMobs.get(this.random.nextInt(newMobs.size()));
-            reactedMobs.add(mobToReact.getUuid());
-            triggerMobReaction(mobToReact);
+        // Count mobs by type and hostility
+        Map<String, Integer> hostileMobs = new HashMap<>();
+        Map<String, Integer> neutralMobs = new HashMap<>();
+        
+        for (Entity entity : nearbyMobs) {
+            String mobName = entity.getName().getString();
+            boolean isHostile = entity instanceof Monster || entity instanceof HostileEntity;
+            
+            if (isHostile) {
+                hostileMobs.merge(mobName, 1, Integer::sum);
+            } else {
+                neutralMobs.merge(mobName, 1, Integer::sum);
+            }
         }
+        
+        int totalHostile = hostileMobs.values().stream().mapToInt(Integer::intValue).sum();
+        int totalNeutral = neutralMobs.values().stream().mapToInt(Integer::intValue).sum();
+        
+        // Build mob summary for context
+        StringBuilder summaryBuilder = new StringBuilder();
+        if (!hostileMobs.isEmpty()) {
+            summaryBuilder.append("Hostile: ");
+            summaryBuilder.append(hostileMobs.entrySet().stream()
+                .map(e -> e.getValue() + "x " + e.getKey())
+                .collect(Collectors.joining(", ")));
+        }
+        if (!neutralMobs.isEmpty()) {
+            if (summaryBuilder.length() > 0) summaryBuilder.append(". ");
+            summaryBuilder.append("Neutral: ");
+            summaryBuilder.append(neutralMobs.entrySet().stream()
+                .map(e -> e.getValue() + "x " + e.getKey())
+                .collect(Collectors.joining(", ")));
+        }
+        
+        String newMobSummary = summaryBuilder.toString();
+        
+        // Check if mob composition has changed significantly
+        boolean hostileChanged = Math.abs(totalHostile - lastHostileCount) >= 2 || 
+                                 (lastHostileCount == 0 && totalHostile > 0);
+        boolean neutralChanged = Math.abs(totalNeutral - lastNeutralCount) >= 3;
+        
+        // Update the mob summary for context
+        this.currentMobSummary = newMobSummary;
+        
+        // React to changes (with cooldown)
+        boolean canReact = currentTime - lastMobReactionTime >= MOB_REACTION_COOLDOWN &&
+                          !isGeneratingResponse &&
+                          currentTime - lastPhraseTime >= SPEECH_COOLDOWN;
+        
+        if (canReact) {
+            // Hostile mobs appeared or changed significantly - higher chance to react
+            if (hostileChanged && totalHostile > 0) {
+                if (this.random.nextFloat() < 0.40f) { // 40% chance for hostiles
+                    triggerMobSummaryReaction(hostileMobs, neutralMobs, totalHostile, totalNeutral, true);
+                    lastMobReactionTime = currentTime;
+                }
+            }
+            // Neutral mobs changed significantly - lower chance to react
+            else if (neutralChanged && totalNeutral > 0 && totalHostile == 0) {
+                if (this.random.nextFloat() < 0.10f) { // 10% chance for neutrals
+                    triggerMobSummaryReaction(hostileMobs, neutralMobs, totalHostile, totalNeutral, false);
+                    lastMobReactionTime = currentTime;
+                }
+            }
+        }
+        
+        // Update last counts
+        lastHostileCount = totalHostile;
+        lastNeutralCount = totalNeutral;
     }
 
-    private void triggerMobReaction(Entity mob) {
-        if (isGeneratingResponse || System.currentTimeMillis() - lastPhraseTime < SPEECH_COOLDOWN) return;
-
-        String mobName = mob.getName().getString();
+    private void triggerMobSummaryReaction(Map<String, Integer> hostileMobs, Map<String, Integer> neutralMobs, 
+                                           int totalHostile, int totalNeutral, boolean isHostileTrigger) {
         String name = getNameForContext();
-        boolean isHostile = mob instanceof Monster || mob instanceof HostileEntity;
-
-        // Add mob sighting to history
-        String mobEvent = name + " spotted " + mobName + (isHostile ? " (hostile)" : " (neutral)") + " nearby.";
-        getMemory().addMessage("system", mobEvent);
-
-        // Update context
-        updateGameContext("Just spotted " + mobName + (isHostile ? " (hostile)" : " (neutral)") + " nearby.");
-
-        // Generate appropriate reaction
-        String prompt = name + " just spotted " + mobName + " nearby. ";
-        if (isHostile) {
-            prompt += "It looks hostile and dangerous. React with concern or readiness to defend.";
-        } else {
-            prompt += "It seems harmless. React with curiosity or indifference.";
+        
+        // Build a natural language summary
+        StringBuilder reactionBuilder = new StringBuilder();
+        
+        if (isHostileTrigger && !hostileMobs.isEmpty()) {
+            reactionBuilder.append(name).append(" noticed ");
+            if (hostileMobs.size() == 1) {
+                Map.Entry<String, Integer> entry = hostileMobs.entrySet().iterator().next();
+                reactionBuilder.append(entry.getValue()).append("x ").append(entry.getKey());
+            } else {
+                reactionBuilder.append("hostile creatures nearby: ");
+                reactionBuilder.append(hostileMobs.entrySet().stream()
+                    .map(e -> e.getValue() + "x " + e.getKey())
+                    .collect(Collectors.joining(", ")));
+            }
+            reactionBuilder.append(".");
+        } else if (!neutralMobs.isEmpty()) {
+            reactionBuilder.append(name).append(" noticed ");
+            if (neutralMobs.size() == 1) {
+                Map.Entry<String, Integer> entry = neutralMobs.entrySet().iterator().next();
+                reactionBuilder.append(entry.getValue() > 1 ? entry.getValue() + "x " : "").append(entry.getKey());
+            } else {
+                reactionBuilder.append("some animals nearby: ");
+                reactionBuilder.append(neutralMobs.entrySet().stream()
+                    .map(e -> e.getValue() + "x " + e.getKey())
+                    .collect(Collectors.joining(", ")));
+            }
+            reactionBuilder.append(".");
         }
-
+        
+        String mobEvent = reactionBuilder.toString();
+        
+        // Add to memory
+        getMemory().addMessage("system", mobEvent);
+        
+        // Update context
+        if (totalHostile > 0) {
+            updateGameContext("Nearby hostiles detected: " + hostileMobs.keySet());
+        }
+        
+        // Generate appropriate reaction
+        String prompt;
+        if (totalHostile > 0) {
+            prompt = name + " noticed hostile creatures nearby (" + 
+                hostileMobs.entrySet().stream()
+                    .map(e -> e.getValue() + "x " + e.getKey())
+                    .collect(Collectors.joining(", ")) + 
+                "). React with caution or concern about the danger.";
+        } else {
+            prompt = name + " noticed some passive animals nearby (" + 
+                neutralMobs.entrySet().stream()
+                    .map(e -> e.getValue() + "x " + e.getKey())
+                    .collect(Collectors.joining(", ")) + 
+                "). React briefly with mild interest or just acknowledge them.";
+        }
+        
         generateAndSayResponse(prompt);
     }
 
@@ -997,6 +1086,11 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
             sb.append("It is raining. ");
         } else if (this.getEntityWorld().isThundering()) {
             sb.append("There is a thunderstorm. ");
+        }
+
+        // Add nearby mob summary if any mobs are nearby
+        if (!this.currentMobSummary.isEmpty()) {
+            sb.append("Nearby Mobs: ").append(this.currentMobSummary).append(". ");
         }
 
         return sb.toString();
