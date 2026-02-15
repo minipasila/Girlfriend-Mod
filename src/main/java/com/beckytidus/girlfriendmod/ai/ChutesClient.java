@@ -31,18 +31,26 @@ public class ChutesClient {
     private static final Gson gson = new Gson();
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod");
 
+    public static String loadSystemPrompt(String name, String systemContext, String playerName) {
+        return SystemPromptManager.loadSystemPrompt(name, systemContext, playerName);
+    }
+
     public static String loadSystemPrompt(String name, String systemContext) {
         return SystemPromptManager.loadSystemPrompt(name, systemContext);
     }
 
-    public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
+    public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext, String playerName) {
         ModConfig config = ModConfig.get();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        String prompt = loadSystemPrompt(name, systemContext);
+        String prompt = loadSystemPrompt(name, systemContext, playerName);
         
         // CLEAN the response here for chat interactions
         return generateRaw(history, prompt)
                 .thenApply(ResponseCleaner::cleanResponse);
+    }
+
+    public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext) {
+        return generateResponse(history, systemContext, "Player");
     }
 
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {

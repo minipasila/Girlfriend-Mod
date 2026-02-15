@@ -1229,8 +1229,9 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
         isGeneratingResponse = true;
 
         String fullContext = buildSystemContext(promptContext);
+        String playerName = getOwnerNameForContext();
 
-        AIClientManager.generateResponse(getMemory().getContextWindow(), fullContext)
+        AIClientManager.generateResponse(getMemory().getContextWindow(), fullContext, playerName)
             .thenAccept(response -> {
                 isGeneratingResponse = false;
                 this.lastPhraseTime = System.currentTimeMillis();
@@ -2001,6 +2002,14 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     // Helper method to get the name for context
     public String getNameForContext() {
         return this.playerCustomName.isEmpty() ? "Girlfriend" : this.playerCustomName;
+    }
+
+    // Helper method to get the owner's name for context
+    public String getOwnerNameForContext() {
+        if (this.owner != null) {
+            return this.owner.getName().getString();
+        }
+        return "Player";
     }
 
     // Helper method to heal with relationship multiplier

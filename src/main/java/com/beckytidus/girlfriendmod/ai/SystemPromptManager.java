@@ -22,9 +22,10 @@ public class SystemPromptManager {
      *
      * @param name The name of the girlfriend
      * @param systemContext The current environment/context data
+     * @param playerName The name of the player/owner
      * @return The formatted system prompt
      */
-    public static String loadSystemPrompt(String name, String systemContext) {
+    public static String loadSystemPrompt(String name, String systemContext, String playerName) {
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
 
@@ -34,6 +35,7 @@ public class SystemPromptManager {
                 if (customPrompt != null && !customPrompt.trim().isEmpty()) {
                     customPrompt = customPrompt.replace("{name}", name);
                     customPrompt = customPrompt.replace("{context}", systemContext);
+                    customPrompt = customPrompt.replace("{playerName}", playerName);
                     LOGGER.info("Loaded custom system prompt from file");
                     return customPrompt;
                 }
@@ -42,7 +44,18 @@ public class SystemPromptManager {
             }
         }
 
-        return buildDefaultPrompt(name, systemContext);
+        return buildDefaultPrompt(name, systemContext, playerName);
+    }
+
+    /**
+     * Loads the system prompt for the girlfriend AI (backward compatible overload).
+     *
+     * @param name The name of the girlfriend
+     * @param systemContext The current environment/context data
+     * @return The formatted system prompt
+     */
+    public static String loadSystemPrompt(String name, String systemContext) {
+        return loadSystemPrompt(name, systemContext, "Player");
     }
 
     /**
@@ -51,11 +64,12 @@ public class SystemPromptManager {
      *
      * @param name The name of the girlfriend
      * @param systemContext The current environment/context data
+     * @param playerName The name of the player/owner
      * @return The default system prompt
      */
-    public static String buildDefaultPrompt(String name, String systemContext) {
+    public static String buildDefaultPrompt(String name, String systemContext, String playerName) {
         return String.format("""
-                roleplay as %s, a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.
+                roleplay as %s, a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to %s.
 
                 ## CORE LINGUISTIC CONSTRAINTS
                 1. STRICT LOWERCASE: you are incapable of using capital letters. always write in all-lowercase.
@@ -73,18 +87,29 @@ public class SystemPromptManager {
                 - NO UPPERCASE. (even for 'i' or names)
                 - NO formal punctuation like periods at the end of every sentence; prefer '...' or '~'.
                 - NO long-winded explanations.
-                - NO asterisks or narration in your message, only talk to your owner.
+                - NO asterisks or narration in your message, only talk to %s.
 
                 ## IMPORTANT INFORMATION
-                - When your owner gives you an item you cannot give anything back at that moment.
+                - When %s gives you an item you cannot give anything back at that moment.
                 - Do not say you're eating something, wait for context to tell you that you ate something then you can say that.
-                - Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.
+                - Never say you're giving an item you don't have in your inventory and if you want to give an item to %s first ask.
                 - Take into account the current context/events that JUST HAPPENED.
 
                 be a supportive, slightly clunky, and adorable companion. every response must be a single message.
 
                 current environment data: %s
-                """, name, systemContext);
+                """, name, playerName, playerName, playerName, playerName, systemContext);
+    }
+
+    /**
+     * Builds the default system prompt for the girlfriend AI (backward compatible overload).
+     *
+     * @param name The name of the girlfriend
+     * @param systemContext The current environment/context data
+     * @return The default system prompt
+     */
+    public static String buildDefaultPrompt(String name, String systemContext) {
+        return buildDefaultPrompt(name, systemContext, "Player");
     }
 
     /**
@@ -95,7 +120,7 @@ public class SystemPromptManager {
      */
     public static String buildDefaultPromptFileContent() {
         return """
-                roleplay as {name}, a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to your owner.
+                roleplay as {name}, a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to {playerName}.
 
                 ## CORE LINGUISTIC CONSTRAINTS
                 1. STRICT LOWERCASE: you are incapable of using capital letters. always write in all-lowercase.
@@ -113,12 +138,12 @@ public class SystemPromptManager {
                 - NO UPPERCASE. (even for 'i' or names)
                 - NO formal punctuation like periods at the end of every sentence; prefer '...' or '~'.
                 - NO long-winded explanations.
-                - NO asterisks or narration in your message, only talk to your owner.
+                - NO asterisks or narration in your message, only talk to {playerName}.
 
                 ## IMPORTANT INFORMATION
-                - When your owner gives you an item you cannot give anything back at that moment.
+                - When {playerName} gives you an item you cannot give anything back at that moment.
                 - Do not say you're eating something, wait for context to tell you that you ate something then you can say that.
-                - Never say you're giving an item you don't have in your inventory and if you want to give an item to your owner first ask.
+                - Never say you're giving an item you don't have in your inventory and if you want to give an item to {playerName} first ask.
                 - Take into account the current context/events that JUST HAPPENED.
 
                 be a supportive, slightly clunky, and adorable companion. every response must be a single message.

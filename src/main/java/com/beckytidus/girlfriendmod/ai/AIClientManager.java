@@ -15,7 +15,7 @@ public class AIClientManager {
     /**
      * Generates a response using the configured AI provider.
      */
-    public static CompletableFuture<String> generateResponse(List<ChutesClient.ChatMessage> history, String systemContext) {
+    public static CompletableFuture<String> generateResponse(List<ChutesClient.ChatMessage> history, String systemContext, String playerName) {
         ModConfig config = ModConfig.get();
 
         switch (config.aiProvider) {
@@ -24,19 +24,26 @@ public class AIClientManager {
                 for (ChutesClient.ChatMessage msg : history) {
                     orMessages.add(new OpenRouterClient.ChatMessage(msg.role, msg.content));
                 }
-                return OpenRouterClient.generateResponse(orMessages, systemContext);
+                return OpenRouterClient.generateResponse(orMessages, systemContext, playerName);
 
             case KOBOLDCPP:
                 List<KoboldCppClient.ChatMessage> kcMessages = new java.util.ArrayList<>();
                 for (ChutesClient.ChatMessage msg : history) {
                     kcMessages.add(new KoboldCppClient.ChatMessage(msg.role, msg.content));
                 }
-                return KoboldCppClient.generateResponse(kcMessages, systemContext);
+                return KoboldCppClient.generateResponse(kcMessages, systemContext, playerName);
 
             case CHUTES:
             default:
-                return ChutesClient.generateResponse(history, systemContext);
+                return ChutesClient.generateResponse(history, systemContext, playerName);
         }
+    }
+
+    /**
+     * Generates a response using the configured AI provider (backward compatible overload).
+     */
+    public static CompletableFuture<String> generateResponse(List<ChutesClient.ChatMessage> history, String systemContext) {
+        return generateResponse(history, systemContext, "Player");
     }
 
     /**
