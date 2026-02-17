@@ -960,7 +960,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     }
 
     private class OwnerSupportGoal extends Goal {
-        private static final double ENGAGE_DISTANCE = 8.0; // Only engage when mob is close
+        private static final double ENGAGE_DISTANCE = 6.0; // Only engage when mob is close
 
         public OwnerSupportGoal() {
             this.setControls(EnumSet.of(Control.TARGET));
