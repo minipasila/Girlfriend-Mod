@@ -99,8 +99,8 @@ public class BlockAwarenessManager {
     }
 
     // Scan configuration
-    private static final int DEFAULT_SCAN_RADIUS = 16;
-    private static final int DEFAULT_VERTICAL_RADIUS = 8;
+    private static final int DEFAULT_SCAN_RADIUS = 8;
+    private static final int DEFAULT_VERTICAL_RADIUS = 4;
     private static final int MAX_BLOCKS_PER_CATEGORY = 10; // Limit for context
 
     // Category mappings - initialized statically for performance
