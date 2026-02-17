@@ -37,7 +37,8 @@ public class BlockAwarenessManager {
         LAVA("lava", true, true),
         PORTAL("portal", false, true),
         VILLAGE_STRUCTURES("village structures", false, false),
-        NATURAL_FEATURES("natural features", true, false);
+        NATURAL_FEATURES("natural features", true, false),
+        TERRAIN("terrain blocks", true, false);
 
         public final String displayName;
         public final boolean canGroup; // Can show as "3x Flowers"
@@ -101,7 +102,7 @@ public class BlockAwarenessManager {
     // Scan configuration
     private static final int DEFAULT_SCAN_RADIUS = 8;
     private static final int DEFAULT_VERTICAL_RADIUS = 4;
-    private static final int MAX_BLOCKS_PER_CATEGORY = 10; // Limit for context
+    private static final int MAX_BLOCKS_PER_CATEGORY = 32; // Limit for context
 
     // Category mappings - initialized statically for performance
     private static final Map<Block, BlockCategory> BLOCK_CATEGORIES = new HashMap<>();
@@ -686,6 +687,156 @@ public class BlockAwarenessManager {
         addBlock(Blocks.MOSS_BLOCK, BlockCategory.NATURAL_FEATURES, "Moss Block");
         addBlock(Blocks.MOSS_CARPET, BlockCategory.NATURAL_FEATURES, "Moss Carpet");
         addBlock(Blocks.PINK_PETALS, BlockCategory.NATURAL_FEATURES, "Pink Petals");
+
+        // === TERRAIN - Stone Variants ===
+        addBlock(Blocks.STONE, BlockCategory.TERRAIN, "Stone");
+        addBlock(Blocks.COBBLESTONE, BlockCategory.TERRAIN, "Cobblestone");
+        addBlock(Blocks.MOSSY_COBBLESTONE, BlockCategory.TERRAIN, "Mossy Cobblestone");
+        addBlock(Blocks.SMOOTH_STONE, BlockCategory.TERRAIN, "Smooth Stone");
+        addBlock(Blocks.STONE_BRICKS, BlockCategory.TERRAIN, "Stone Bricks");
+        addBlock(Blocks.MOSSY_STONE_BRICKS, BlockCategory.TERRAIN, "Mossy Stone Bricks");
+        addBlock(Blocks.CRACKED_STONE_BRICKS, BlockCategory.TERRAIN, "Cracked Stone Bricks");
+        addBlock(Blocks.CHISELED_STONE_BRICKS, BlockCategory.TERRAIN, "Chiseled Stone Bricks");
+        // Deepslate variants
+        addBlock(Blocks.DEEPSLATE, BlockCategory.TERRAIN, "Deepslate");
+        addBlock(Blocks.COBBLED_DEEPSLATE, BlockCategory.TERRAIN, "Cobbled Deepslate");
+        addBlock(Blocks.POLISHED_DEEPSLATE, BlockCategory.TERRAIN, "Polished Deepslate");
+        addBlock(Blocks.DEEPSLATE_BRICKS, BlockCategory.TERRAIN, "Deepslate Bricks");
+        addBlock(Blocks.DEEPSLATE_TILES, BlockCategory.TERRAIN, "Deepslate Tiles");
+        addBlock(Blocks.CHISELED_DEEPSLATE, BlockCategory.TERRAIN, "Chiseled Deepslate");
+        addBlock(Blocks.CRACKED_DEEPSLATE_BRICKS, BlockCategory.TERRAIN, "Cracked Deepslate Bricks");
+        addBlock(Blocks.CRACKED_DEEPSLATE_TILES, BlockCategory.TERRAIN, "Cracked Deepslate Tiles");
+        // Stone types
+        addBlock(Blocks.ANDESITE, BlockCategory.TERRAIN, "Andesite");
+        addBlock(Blocks.POLISHED_ANDESITE, BlockCategory.TERRAIN, "Polished Andesite");
+        addBlock(Blocks.DIORITE, BlockCategory.TERRAIN, "Diorite");
+        addBlock(Blocks.POLISHED_DIORITE, BlockCategory.TERRAIN, "Polished Diorite");
+        addBlock(Blocks.GRANITE, BlockCategory.TERRAIN, "Granite");
+        addBlock(Blocks.POLISHED_GRANITE, BlockCategory.TERRAIN, "Polished Granite");
+        addBlock(Blocks.TUFF, BlockCategory.TERRAIN, "Tuff");
+        addBlock(Blocks.POLISHED_TUFF, BlockCategory.TERRAIN, "Polished Tuff");
+        addBlock(Blocks.TUFF_BRICKS, BlockCategory.TERRAIN, "Tuff Bricks");
+        addBlock(Blocks.CHISELED_TUFF, BlockCategory.TERRAIN, "Chiseled Tuff");
+        addBlock(Blocks.CALCITE, BlockCategory.TERRAIN, "Calcite");
+        addBlock(Blocks.DRIPSTONE_BLOCK, BlockCategory.TERRAIN, "Dripstone Block");
+
+        // === TERRAIN - Dirt & Soil Variants ===
+        addBlock(Blocks.GRASS_BLOCK, BlockCategory.TERRAIN, "Grass Block");
+        addBlock(Blocks.DIRT, BlockCategory.TERRAIN, "Dirt");
+        addBlock(Blocks.COARSE_DIRT, BlockCategory.TERRAIN, "Coarse Dirt");
+        addBlock(Blocks.ROOTED_DIRT, BlockCategory.TERRAIN, "Rooted Dirt");
+        addBlock(Blocks.DIRT_PATH, BlockCategory.TERRAIN, "Dirt Path");
+        addBlock(Blocks.MYCELIUM, BlockCategory.TERRAIN, "Mycelium");
+        addBlock(Blocks.PODZOL, BlockCategory.TERRAIN, "Podzol");
+        addBlock(Blocks.PALE_MOSS_BLOCK, BlockCategory.TERRAIN, "Pale Moss Block");
+        addBlock(Blocks.PALE_MOSS_CARPET, BlockCategory.TERRAIN, "Pale Moss Carpet");
+
+        // === TERRAIN - Sand & Gravel ===
+        addBlock(Blocks.SAND, BlockCategory.TERRAIN, "Sand");
+        addBlock(Blocks.RED_SAND, BlockCategory.TERRAIN, "Red Sand");
+        addBlock(Blocks.GRAVEL, BlockCategory.TERRAIN, "Gravel");
+        // Sandstone variants
+        addBlock(Blocks.SANDSTONE, BlockCategory.TERRAIN, "Sandstone");
+        addBlock(Blocks.SMOOTH_SANDSTONE, BlockCategory.TERRAIN, "Smooth Sandstone");
+        addBlock(Blocks.CUT_SANDSTONE, BlockCategory.TERRAIN, "Cut Sandstone");
+        addBlock(Blocks.CHISELED_SANDSTONE, BlockCategory.TERRAIN, "Chiseled Sandstone");
+        // Red Sandstone variants
+        addBlock(Blocks.RED_SANDSTONE, BlockCategory.TERRAIN, "Red Sandstone");
+        addBlock(Blocks.SMOOTH_RED_SANDSTONE, BlockCategory.TERRAIN, "Smooth Red Sandstone");
+        addBlock(Blocks.CUT_RED_SANDSTONE, BlockCategory.TERRAIN, "Cut Red Sandstone");
+        addBlock(Blocks.CHISELED_RED_SANDSTONE, BlockCategory.TERRAIN, "Chiseled Red Sandstone");
+        // Suspect blocks
+        addBlock(Blocks.SUSPICIOUS_SAND, BlockCategory.TERRAIN, "Suspicious Sand");
+        addBlock(Blocks.SUSPICIOUS_GRAVEL, BlockCategory.TERRAIN, "Suspicious Gravel");
+
+        // === TERRAIN - Snow & Ice ===
+        addBlock(Blocks.SNOW_BLOCK, BlockCategory.TERRAIN, "Snow Block");
+        addBlock(Blocks.SNOW, BlockCategory.TERRAIN, "Snow Layer");
+        // Powder Snow is also in DANGEROUS but categorized here for awareness
+        addBlock(Blocks.ICE, BlockCategory.TERRAIN, "Ice");
+        addBlock(Blocks.PACKED_ICE, BlockCategory.TERRAIN, "Packed Ice");
+        addBlock(Blocks.BLUE_ICE, BlockCategory.TERRAIN, "Blue Ice");
+        addBlock(Blocks.FROSTED_ICE, BlockCategory.TERRAIN, "Frosted Ice");
+
+        // === TERRAIN - Underground & Special ===
+        addBlock(Blocks.BEDROCK, BlockCategory.TERRAIN, "Bedrock");
+        addBlock(Blocks.OBSIDIAN, BlockCategory.TERRAIN, "Obsidian");
+        addBlock(Blocks.CRYING_OBSIDIAN, BlockCategory.TERRAIN, "Crying Obsidian");
+        addBlock(Blocks.CLAY, BlockCategory.TERRAIN, "Clay");
+        addBlock(Blocks.TERRACOTTA, BlockCategory.TERRAIN, "Terracotta");
+        // Colored Terracotta
+        addBlock(Blocks.WHITE_TERRACOTTA, BlockCategory.TERRAIN, "White Terracotta");
+        addBlock(Blocks.ORANGE_TERRACOTTA, BlockCategory.TERRAIN, "Orange Terracotta");
+        addBlock(Blocks.MAGENTA_TERRACOTTA, BlockCategory.TERRAIN, "Magenta Terracotta");
+        addBlock(Blocks.LIGHT_BLUE_TERRACOTTA, BlockCategory.TERRAIN, "Light Blue Terracotta");
+        addBlock(Blocks.YELLOW_TERRACOTTA, BlockCategory.TERRAIN, "Yellow Terracotta");
+        addBlock(Blocks.LIME_TERRACOTTA, BlockCategory.TERRAIN, "Lime Terracotta");
+        addBlock(Blocks.PINK_TERRACOTTA, BlockCategory.TERRAIN, "Pink Terracotta");
+        addBlock(Blocks.GRAY_TERRACOTTA, BlockCategory.TERRAIN, "Gray Terracotta");
+        addBlock(Blocks.LIGHT_GRAY_TERRACOTTA, BlockCategory.TERRAIN, "Light Gray Terracotta");
+        addBlock(Blocks.CYAN_TERRACOTTA, BlockCategory.TERRAIN, "Cyan Terracotta");
+        addBlock(Blocks.PURPLE_TERRACOTTA, BlockCategory.TERRAIN, "Purple Terracotta");
+        addBlock(Blocks.BLUE_TERRACOTTA, BlockCategory.TERRAIN, "Blue Terracotta");
+        addBlock(Blocks.BROWN_TERRACOTTA, BlockCategory.TERRAIN, "Brown Terracotta");
+        addBlock(Blocks.GREEN_TERRACOTTA, BlockCategory.TERRAIN, "Green Terracotta");
+        addBlock(Blocks.RED_TERRACOTTA, BlockCategory.TERRAIN, "Red Terracotta");
+        addBlock(Blocks.BLACK_TERRACOTTA, BlockCategory.TERRAIN, "Black Terracotta");
+        // Glazed Terracotta
+        addBlock(Blocks.WHITE_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "White Glazed Terracotta");
+        addBlock(Blocks.ORANGE_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Orange Glazed Terracotta");
+        addBlock(Blocks.MAGENTA_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Magenta Glazed Terracotta");
+        addBlock(Blocks.LIGHT_BLUE_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Light Blue Glazed Terracotta");
+        addBlock(Blocks.YELLOW_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Yellow Glazed Terracotta");
+        addBlock(Blocks.LIME_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Lime Glazed Terracotta");
+        addBlock(Blocks.PINK_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Pink Glazed Terracotta");
+        addBlock(Blocks.GRAY_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Gray Glazed Terracotta");
+        addBlock(Blocks.LIGHT_GRAY_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Light Gray Glazed Terracotta");
+        addBlock(Blocks.CYAN_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Cyan Glazed Terracotta");
+        addBlock(Blocks.PURPLE_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Purple Glazed Terracotta");
+        addBlock(Blocks.BLUE_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Blue Glazed Terracotta");
+        addBlock(Blocks.BROWN_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Brown Glazed Terracotta");
+        addBlock(Blocks.GREEN_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Green Glazed Terracotta");
+        addBlock(Blocks.RED_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Red Glazed Terracotta");
+        addBlock(Blocks.BLACK_GLAZED_TERRACOTTA, BlockCategory.TERRAIN, "Black Glazed Terracotta");
+        // Concrete (often used for building/terrain)
+        addBlock(Blocks.WHITE_CONCRETE, BlockCategory.TERRAIN, "White Concrete");
+        addBlock(Blocks.ORANGE_CONCRETE, BlockCategory.TERRAIN, "Orange Concrete");
+        addBlock(Blocks.MAGENTA_CONCRETE, BlockCategory.TERRAIN, "Magenta Concrete");
+        addBlock(Blocks.LIGHT_BLUE_CONCRETE, BlockCategory.TERRAIN, "Light Blue Concrete");
+        addBlock(Blocks.YELLOW_CONCRETE, BlockCategory.TERRAIN, "Yellow Concrete");
+        addBlock(Blocks.LIME_CONCRETE, BlockCategory.TERRAIN, "Lime Concrete");
+        addBlock(Blocks.PINK_CONCRETE, BlockCategory.TERRAIN, "Pink Concrete");
+        addBlock(Blocks.GRAY_CONCRETE, BlockCategory.TERRAIN, "Gray Concrete");
+        addBlock(Blocks.LIGHT_GRAY_CONCRETE, BlockCategory.TERRAIN, "Light Gray Concrete");
+        addBlock(Blocks.CYAN_CONCRETE, BlockCategory.TERRAIN, "Cyan Concrete");
+        addBlock(Blocks.PURPLE_CONCRETE, BlockCategory.TERRAIN, "Purple Concrete");
+        addBlock(Blocks.BLUE_CONCRETE, BlockCategory.TERRAIN, "Blue Concrete");
+        addBlock(Blocks.BROWN_CONCRETE, BlockCategory.TERRAIN, "Brown Concrete");
+        addBlock(Blocks.GREEN_CONCRETE, BlockCategory.TERRAIN, "Green Concrete");
+        addBlock(Blocks.RED_CONCRETE, BlockCategory.TERRAIN, "Red Concrete");
+        addBlock(Blocks.BLACK_CONCRETE, BlockCategory.TERRAIN, "Black Concrete");
+        // Concrete Powder
+        addBlock(Blocks.WHITE_CONCRETE_POWDER, BlockCategory.TERRAIN, "White Concrete Powder");
+        addBlock(Blocks.ORANGE_CONCRETE_POWDER, BlockCategory.TERRAIN, "Orange Concrete Powder");
+        addBlock(Blocks.MAGENTA_CONCRETE_POWDER, BlockCategory.TERRAIN, "Magenta Concrete Powder");
+        addBlock(Blocks.LIGHT_BLUE_CONCRETE_POWDER, BlockCategory.TERRAIN, "Light Blue Concrete Powder");
+        addBlock(Blocks.YELLOW_CONCRETE_POWDER, BlockCategory.TERRAIN, "Yellow Concrete Powder");
+        addBlock(Blocks.LIME_CONCRETE_POWDER, BlockCategory.TERRAIN, "Lime Concrete Powder");
+        addBlock(Blocks.PINK_CONCRETE_POWDER, BlockCategory.TERRAIN, "Pink Concrete Powder");
+        addBlock(Blocks.GRAY_CONCRETE_POWDER, BlockCategory.TERRAIN, "Gray Concrete Powder");
+        addBlock(Blocks.LIGHT_GRAY_CONCRETE_POWDER, BlockCategory.TERRAIN, "Light Gray Concrete Powder");
+        addBlock(Blocks.CYAN_CONCRETE_POWDER, BlockCategory.TERRAIN, "Cyan Concrete Powder");
+        addBlock(Blocks.PURPLE_CONCRETE_POWDER, BlockCategory.TERRAIN, "Purple Concrete Powder");
+        addBlock(Blocks.BLUE_CONCRETE_POWDER, BlockCategory.TERRAIN, "Blue Concrete Powder");
+        addBlock(Blocks.BROWN_CONCRETE_POWDER, BlockCategory.TERRAIN, "Brown Concrete Powder");
+        addBlock(Blocks.GREEN_CONCRETE_POWDER, BlockCategory.TERRAIN, "Green Concrete Powder");
+        addBlock(Blocks.RED_CONCRETE_POWDER, BlockCategory.TERRAIN, "Red Concrete Powder");
+        addBlock(Blocks.BLACK_CONCRETE_POWDER, BlockCategory.TERRAIN, "Black Concrete Powder");
+        // Mud
+        addBlock(Blocks.MUD, BlockCategory.TERRAIN, "Mud");
+        addBlock(Blocks.PACKED_MUD, BlockCategory.TERRAIN, "Packed Mud");
+        addBlock(Blocks.MUD_BRICKS, BlockCategory.TERRAIN, "Mud Bricks");
+        // Pointed Dripstone is in DANGEROUS, but the block form is here
     }
 
     private static void addBlock(Block block, BlockCategory category, String displayName) {
@@ -1017,6 +1168,7 @@ public class BlockAwarenessManager {
             case PORTAL -> girlfriendName + " sees a " + mostInteresting.displayName + " " + location + ". React with wonder or curiosity.";
             case WATER -> null; // Don't react to water
             case NATURAL_FEATURES -> generateNaturalFeatureReaction(mostInteresting, girlfriendName, location);
+            case TERRAIN -> generateTerrainReaction(mostInteresting, girlfriendName, location);
             default -> girlfriendName + " noticed " + mostInteresting.displayName + " " + location + ". Briefly acknowledge it.";
         };
     }
@@ -1120,5 +1272,48 @@ public class BlockAwarenessManager {
         
         // Default for other natural features
         return girlfriendName + " notices " + block.displayName + " " + location + ". Briefly acknowledge the natural surroundings.";
+    }
+
+    /**
+     * Generate a reaction prompt for terrain blocks.
+     * Terrain blocks are common, so reactions are minimal or null (no reaction needed).
+     */
+    private static String generateTerrainReaction(DetectedBlock block, String girlfriendName, String location) {
+        // Snow & Ice - can comment on cold environment
+        if (block.block == Blocks.SNOW_BLOCK || block.block == Blocks.SNOW || block.block == Blocks.ICE) {
+            return girlfriendName + " notices the cold " + block.displayName + " " + location + ". Comment briefly on the wintry environment.";
+        }
+        if (block.block == Blocks.PACKED_ICE || block.block == Blocks.BLUE_ICE) {
+            return girlfriendName + " sees slippery " + block.displayName + " " + location + ". Mention it's good for packing or boating.";
+        }
+        
+        // Obsidian - worth a small comment
+        if (block.block == Blocks.OBSIDIAN || block.block == Blocks.CRYING_OBSIDIAN) {
+            return girlfriendName + " spots " + block.displayName + " " + location + ". Briefly note how tough and durable it is.";
+        }
+        
+        // Bedrock - unbreakable
+        if (block.block == Blocks.BEDROCK) {
+            return girlfriendName + " sees unbreakable Bedrock " + location + ". Briefly acknowledge reaching the bottom of the world.";
+        }
+        
+        // Suspicious blocks - potential treasure
+        if (block.block == Blocks.SUSPICIOUS_SAND || block.block == Blocks.SUSPICIOUS_GRAVEL) {
+            return girlfriendName + " notices suspicious-looking " + block.displayName + " " + location + ". Suggest there might be something hidden inside!";
+        }
+        
+        // Mud - messy terrain
+        if (block.block == Blocks.MUD) {
+            return girlfriendName + " steps in Mud " + location + ". Comment on the messy ground.";
+        }
+        
+        // Clay - useful for bricks
+        if (block.block == Blocks.CLAY) {
+            return girlfriendName + " spots Clay " + location + ". Mention it could be useful for bricks or pottery.";
+        }
+        
+        // For common terrain blocks (stone, dirt, gravel, sand, etc.) - no reaction needed
+        // These are too ubiquitous to warrant comments
+        return null;
     }
 }
