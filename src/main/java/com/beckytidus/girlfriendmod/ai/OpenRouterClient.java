@@ -45,7 +45,7 @@ public class OpenRouterClient {
         String prompt = loadSystemPrompt(name, systemContext, playerName);
         
         // CLEAN for chat
-        return generateRaw(history, prompt)
+        return generateRawWithContext(history, prompt, systemContext)
                 .thenApply(ResponseCleaner::cleanResponse);
     }
 
@@ -54,6 +54,14 @@ public class OpenRouterClient {
     }
 
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
+        return generateRawWithContext(history, systemPrompt, null);
+    }
+
+    /**
+     * Generates a response with the current status context placed AFTER the chat history.
+     * This ensures the AI sees the most up-to-date status information at the end of the context.
+     */
+    public static CompletableFuture<String> generateRawWithContext(List<ChatMessage> history, String systemPrompt, String currentStatus) {
         ModConfig config = ModConfig.get();
         String apiKey = config.getActiveApiKey();
 
@@ -70,16 +78,27 @@ public class OpenRouterClient {
         body.addProperty("min_p", config.minP);
 
         JsonArray messages = new JsonArray();
+        
+        // 1. System prompt FIRST (personality, instructions)
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content", systemPrompt);
         messages.add(system);
 
+        // 2. Chat history in the middle
         for (ChatMessage msg : history) {
             JsonObject m = new JsonObject();
             m.addProperty("role", msg.role);
             m.addProperty("content", msg.content);
             messages.add(m);
+        }
+
+        // 3. Current status LAST (most recent context for the AI to see)
+        if (currentStatus != null && !currentStatus.isEmpty()) {
+            JsonObject statusMessage = new JsonObject();
+            statusMessage.addProperty("role", "system");
+            statusMessage.addProperty("content", "CURRENT STATUS: " + currentStatus);
+            messages.add(statusMessage);
         }
 
         body.add("messages", messages);

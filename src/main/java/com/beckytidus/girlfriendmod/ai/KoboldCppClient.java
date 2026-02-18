@@ -41,7 +41,7 @@ public class KoboldCppClient {
         String prompt = loadSystemPrompt(name, systemContext, playerName);
         
         // CLEAN for chat
-        return generateRaw(history, prompt)
+        return generateRawWithContext(history, prompt, systemContext)
                 .thenApply(ResponseCleaner::cleanResponse);
     }
 
@@ -50,7 +50,14 @@ public class KoboldCppClient {
     }
 
     public static CompletableFuture<String> generateRaw(List<ChatMessage> history, String systemPrompt) {
-        // ... existing method ...
+        return generateRawWithContext(history, systemPrompt, null);
+    }
+
+    /**
+     * Generates a response with the current status context placed AFTER the chat history.
+     * This ensures the AI sees the most up-to-date status information at the end of the context.
+     */
+    public static CompletableFuture<String> generateRawWithContext(List<ChatMessage> history, String systemPrompt, String currentStatus) {
         ModConfig config = ModConfig.get();
         String baseUrl = config.koboldCppUrl;
 
@@ -63,13 +70,13 @@ public class KoboldCppClient {
         }
 
         if (config.koboldCppUseChatCompletions) {
-            return generateViaChatCompletions(baseUrl, history, systemPrompt);
+            return generateViaChatCompletions(baseUrl, history, systemPrompt, currentStatus);
         } else {
-            return generateViaKoboldAPI(baseUrl, history, systemPrompt);
+            return generateViaKoboldAPI(baseUrl, history, systemPrompt, currentStatus);
         }
     }
 
-    private static CompletableFuture<String> generateViaChatCompletions(String baseUrl, List<ChatMessage> history, String systemPrompt) {
+    private static CompletableFuture<String> generateViaChatCompletions(String baseUrl, List<ChatMessage> history, String systemPrompt, String currentStatus) {
         ModConfig config = ModConfig.get();
 
         // ... request construction ...
@@ -81,17 +88,29 @@ public class KoboldCppClient {
         body.addProperty("min_p", config.minP);
 
         JsonArray messages = new JsonArray();
+        
+        // 1. System prompt FIRST (personality, instructions)
         JsonObject system = new JsonObject();
         system.addProperty("role", "system");
         system.addProperty("content", systemPrompt);
         messages.add(system);
 
+        // 2. Chat history in the middle
         for (ChatMessage msg : history) {
             JsonObject m = new JsonObject();
             m.addProperty("role", msg.role);
             m.addProperty("content", msg.content);
             messages.add(m);
         }
+
+        // 3. Current status LAST (most recent context for the AI to see)
+        if (currentStatus != null && !currentStatus.isEmpty()) {
+            JsonObject statusMessage = new JsonObject();
+            statusMessage.addProperty("role", "system");
+            statusMessage.addProperty("content", "CURRENT STATUS: " + currentStatus);
+            messages.add(statusMessage);
+        }
+
         body.add("messages", messages);
 
         String url = baseUrl + "/v1/chat/completions";
@@ -137,14 +156,16 @@ public class KoboldCppClient {
                 });
     }
 
-    private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemPrompt) {
+    private static CompletableFuture<String> generateViaKoboldAPI(String baseUrl, List<ChatMessage> history, String systemPrompt, String currentStatus) {
         // ... similar logic, removing cleanResponse ...
         ModConfig config = ModConfig.get();
         StringBuilder promptBuilder = new StringBuilder();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
 
+        // 1. System prompt FIRST (personality, instructions)
         promptBuilder.append(systemPrompt).append("\n\n");
-        // ... build prompt ...
+        
+        // 2. Chat history in the middle
         for (ChatMessage msg : history) {
             String role = msg.role.equals("user") ? "User" :
                          msg.role.equals("assistant") ? name :
@@ -152,6 +173,13 @@ public class KoboldCppClient {
             promptBuilder.append("<|").append(role).append("|>\n");
             promptBuilder.append(msg.content).append("\n");
         }
+        
+        // 3. Current status LAST (most recent context for the AI to see)
+        if (currentStatus != null && !currentStatus.isEmpty()) {
+            promptBuilder.append("<|SYSTEM|>\n");
+            promptBuilder.append("CURRENT STATUS: ").append(currentStatus).append("\n");
+        }
+        
         promptBuilder.append("<|").append(name.toUpperCase()).append("|>\n");
         String prompt = promptBuilder.toString();
 

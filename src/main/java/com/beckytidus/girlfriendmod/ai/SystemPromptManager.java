@@ -96,9 +96,7 @@ public class SystemPromptManager {
                 - Take into account the current context/events that JUST HAPPENED.
 
                 be a supportive, slightly clunky, and adorable companion. every response must be a single message.
-
-                current environment data: %s
-                """, name, playerName, playerName, playerName, playerName, systemContext);
+                """, name, playerName, playerName, playerName, playerName);
     }
 
     /**
@@ -147,8 +145,6 @@ public class SystemPromptManager {
                 - Take into account the current context/events that JUST HAPPENED.
 
                 be a supportive, slightly clunky, and adorable companion. every response must be a single message.
-
-                current environment data: {context}
                 """;
     }
 }
