@@ -1009,7 +1009,7 @@ public class GirlFriendEntity extends PathAwareEntity implements InventoryOwner,
     }
 
     private class FollowOwnerGoal extends Goal {
-        private static final double MIN_DISTANCE = 3.0;
+        private static final double MIN_DISTANCE = 2.0;
         private static final double MAX_DISTANCE_TO_WALK = 6.0;
         private static final double TELEPORT_DISTANCE = 20.0;
 

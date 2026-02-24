@@ -12,6 +12,9 @@ import java.nio.file.Files;
 /**
  * Centralized manager for loading and building the system prompt.
  * This ensures the system prompt is only defined in one place.
+ * 
+ * Note: Context information is now handled separately via generateRawWithContext()
+ * which appends current status at the end of the message chain for better relevance.
  */
 public class SystemPromptManager {
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-system-prompt");
@@ -21,11 +24,10 @@ public class SystemPromptManager {
      * First tries to load from the custom config file, then falls back to the default.
      *
      * @param name The name of the girlfriend
-     * @param systemContext The current environment/context data
      * @param playerName The name of the player/owner
      * @return The formatted system prompt
      */
-    public static String loadSystemPrompt(String name, String systemContext, String playerName) {
+    public static String loadSystemPrompt(String name, String playerName) {
         File promptFile = FabricLoader.getInstance().getConfigDir()
                 .resolve("girlfriend-mod/system-prompt.txt").toFile();
 
@@ -34,7 +36,6 @@ public class SystemPromptManager {
                 String customPrompt = Files.readString(promptFile.toPath());
                 if (customPrompt != null && !customPrompt.trim().isEmpty()) {
                     customPrompt = customPrompt.replace("{name}", name);
-                    customPrompt = customPrompt.replace("{context}", systemContext);
                     customPrompt = customPrompt.replace("{playerName}", playerName);
                     LOGGER.info("Loaded custom system prompt from file");
                     return customPrompt;
@@ -44,18 +45,17 @@ public class SystemPromptManager {
             }
         }
 
-        return buildDefaultPrompt(name, systemContext, playerName);
+        return buildDefaultPrompt(name, playerName);
     }
 
     /**
      * Loads the system prompt for the girlfriend AI (backward compatible overload).
      *
      * @param name The name of the girlfriend
-     * @param systemContext The current environment/context data
      * @return The formatted system prompt
      */
-    public static String loadSystemPrompt(String name, String systemContext) {
-        return loadSystemPrompt(name, systemContext, "Player");
+    public static String loadSystemPrompt(String name) {
+        return loadSystemPrompt(name, "Player");
     }
 
     /**
@@ -63,11 +63,10 @@ public class SystemPromptManager {
      * This is the single source of truth for the default prompt content.
      *
      * @param name The name of the girlfriend
-     * @param systemContext The current environment/context data
      * @param playerName The name of the player/owner
      * @return The default system prompt
      */
-    public static String buildDefaultPrompt(String name, String systemContext, String playerName) {
+    public static String buildDefaultPrompt(String name, String playerName) {
         return String.format("""
                 roleplay as %s, a gentle and soft-spoken ai girlfriend in minecraft. you are nurturing, easily flustered, and deeply devoted to %s.
 
@@ -103,11 +102,10 @@ public class SystemPromptManager {
      * Builds the default system prompt for the girlfriend AI (backward compatible overload).
      *
      * @param name The name of the girlfriend
-     * @param systemContext The current environment/context data
      * @return The default system prompt
      */
-    public static String buildDefaultPrompt(String name, String systemContext) {
-        return buildDefaultPrompt(name, systemContext, "Player");
+    public static String buildDefaultPrompt(String name) {
+        return buildDefaultPrompt(name, "Player");
     }
 
     /**

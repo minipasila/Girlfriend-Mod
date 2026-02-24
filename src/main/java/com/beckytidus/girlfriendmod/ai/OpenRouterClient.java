@@ -2,28 +2,23 @@ package com.beckytidus.girlfriendmod.ai;
 
 import com.beckytidus.girlfriendmod.config.ModConfig;
 import com.beckytidus.girlfriendmod.ai.ResponseCleaner;
-// ... imports ...
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.File;
-import java.io.IOException;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class OpenRouterClient {
-    // ... fields ...
     private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
@@ -31,18 +26,14 @@ public class OpenRouterClient {
     private static final Gson gson = new Gson();
     private static final Logger LOGGER = LoggerFactory.getLogger("girlfriend-mod-openrouter");
 
-    public static String loadSystemPrompt(String name, String systemContext, String playerName) {
-        return SystemPromptManager.loadSystemPrompt(name, systemContext, playerName);
-    }
-
-    public static String loadSystemPrompt(String name, String systemContext) {
-        return SystemPromptManager.loadSystemPrompt(name, systemContext);
-    }
-
+    /**
+     * Generates a response using the OpenRouter API.
+     * Context is handled via generateRawWithContext() which appends current status at the end.
+     */
     public static CompletableFuture<String> generateResponse(List<ChatMessage> history, String systemContext, String playerName) {
         ModConfig config = ModConfig.get();
         String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
-        String prompt = loadSystemPrompt(name, systemContext, playerName);
+        String prompt = SystemPromptManager.loadSystemPrompt(name, playerName);
         
         // CLEAN for chat
         return generateRawWithContext(history, prompt, systemContext)
@@ -69,7 +60,6 @@ public class OpenRouterClient {
             return CompletableFuture.completedFuture("please set your api key in config... ^^");
         }
 
-        // ... request construction ...
         JsonObject body = new JsonObject();
         body.addProperty("model", config.getActiveModelName());
         body.addProperty("stream", false);

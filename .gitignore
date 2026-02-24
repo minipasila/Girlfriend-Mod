@@ -24,6 +24,10 @@ bin/
 .classpath
 .project
 
+# Kilo Code
+
+plans/
+
 # macos
 
 *.DS_Store
