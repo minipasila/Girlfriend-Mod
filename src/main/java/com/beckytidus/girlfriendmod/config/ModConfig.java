@@ -139,7 +139,7 @@ public class ModConfig {
         return switch (aiProvider) {
             case CHUTES -> chutesModelContextWindow > 0 ? chutesModelContextWindow : 128000;  // DeepSeek-V3 default
             case OPENROUTER -> openRouterModelContextWindow > 0 ? openRouterModelContextWindow : 131072;  // Grok default
-            case KOBOLDCPP -> koboldCppContextWindow > 0 ? koboldCppContextWindow : 4096;  // Conservative default for local
+            case KOBOLDCPP -> koboldCppContextWindow > 0 ? koboldCppContextWindow : 8192;  // Conservative default for local
         };
     }
 
