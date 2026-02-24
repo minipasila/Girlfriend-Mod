@@ -49,6 +49,101 @@ public class OpenRouterClient {
     }
 
     /**
+     * Generates a response with token usage information.
+     * Use this method when accurate token counting is needed.
+     */
+    public static CompletableFuture<AIResponse> generateRawWithContextWithTokens(List<ChatMessage> history, String systemPrompt, String currentStatus) {
+        ModConfig config = ModConfig.get();
+        String apiKey = config.getActiveApiKey();
+
+        if (apiKey == null || apiKey.isEmpty()) {
+            return CompletableFuture.completedFuture(new AIResponse("please set your api key in config... ^^"));
+        }
+
+        JsonObject body = new JsonObject();
+        body.addProperty("model", config.getActiveModelName());
+        body.addProperty("stream", false);
+        body.addProperty("max_tokens", config.maxGenerationTokens);
+        body.addProperty("temperature", config.temperature);
+        body.addProperty("min_p", config.minP);
+
+        JsonArray messages = new JsonArray();
+        
+        // 1. System prompt FIRST (personality, instructions)
+        JsonObject system = new JsonObject();
+        system.addProperty("role", "system");
+        system.addProperty("content", systemPrompt);
+        messages.add(system);
+
+        // 2. Chat history in the middle
+        for (ChatMessage msg : history) {
+            JsonObject m = new JsonObject();
+            m.addProperty("role", msg.role);
+            m.addProperty("content", msg.content);
+            messages.add(m);
+        }
+
+        // 3. Current status LAST (most recent context for the AI to see)
+        if (currentStatus != null && !currentStatus.isEmpty()) {
+            JsonObject statusMessage = new JsonObject();
+            statusMessage.addProperty("role", "system");
+            statusMessage.addProperty("content", "CURRENT STATUS: " + currentStatus);
+            messages.add(statusMessage);
+        }
+
+        body.add("messages", messages);
+
+        String requestJson = gson.toJson(body);
+        LOGGER.info("[AI Debug] OpenRouter Request: {}", requestJson);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .header("HTTP-Referer", "https://github.com/minipasila/Girlfriend-Mod")
+                .header("X-Title", "Girlfriend Mod")
+                .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    String responseBody = response.body();
+                    LOGGER.info("[AI Debug] OpenRouter Response ({}): {}", response.statusCode(), responseBody);
+
+                    if (response.statusCode() != 200) {
+                        return new AIResponse("error: " + response.statusCode() + "... sorry >.<");
+                    }
+                    try {
+                        JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
+                        JsonObject choice = json.getAsJsonArray("choices").get(0).getAsJsonObject();
+                        JsonObject message = choice.get("message").getAsJsonObject();
+
+                        String content = "";
+                        if (message.has("content") && !message.get("content").isJsonNull()) {
+                            content = message.get("content").getAsString();
+                        }
+
+                        if (content == null || content.trim().isEmpty()) {
+                            return new AIResponse("...");
+                        }
+
+                        // Extract token usage
+                        AIResponse.TokenUsage tokenUsage = null;
+                        if (json.has("usage") && !json.get("usage").isJsonNull()) {
+                            tokenUsage = AIResponse.TokenUsage.fromJson(json.getAsJsonObject("usage"));
+                            LOGGER.debug("[Token Debug] OpenRouter - Prompt: {}, Completion: {}, Total: {}",
+                                tokenUsage.promptTokens, tokenUsage.completionTokens, tokenUsage.totalTokens);
+                        }
+
+                        return new AIResponse(content, tokenUsage);
+                    } catch (Exception e) {
+                        LOGGER.error("Error parsing OpenRouter response", e);
+                        return new AIResponse("error parsing response... " + e.getMessage());
+                    }
+                });
+    }
+
+    /**
      * Generates a response with the current status context placed AFTER the chat history.
      * This ensures the AI sees the most up-to-date status information at the end of the context.
      */

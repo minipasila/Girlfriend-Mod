@@ -22,6 +22,9 @@ public class ConversationManager {
     private List<ChutesClient.ChatMessage> history = new ArrayList<>();
     private String summary = "";
     
+    // Token counting service for accurate tracking
+    private final TokenCountingService tokenService = new TokenCountingService();
+    
     // Flag to prevent concurrent modifications during summarization
     private final AtomicBoolean isSummarizing = new AtomicBoolean(false);
     
@@ -38,10 +41,24 @@ public class ConversationManager {
         }
     }
 
+    /**
+     * Updates token count from API response.
+     * Call this after each API request to maintain accurate token tracking.
+     *
+     * @param tokenUsage The token usage from the API response
+     */
+    public void updateTokenCount(AIResponse.TokenUsage tokenUsage) {
+        if (tokenUsage != null) {
+            tokenService.updateFromValues(tokenUsage.promptTokens, tokenUsage.completionTokens, tokenUsage.totalTokens);
+            LOGGER.debug("Token count updated: {}", tokenService.getTokenStats());
+        }
+    }
+
     public void clear() {
         synchronized (this) {
             history.clear();
             summary = "";
+            tokenService.reset();
             save();
         }
     }
@@ -121,14 +138,18 @@ public class ConversationManager {
     }
 
     private void checkSummarization() {
-        // Only count history tokens for the threshold check
-        int historyTokens = history.stream()
-                .mapToInt(m -> estimateTokens(m.content))
-                .sum();
+        // Use API-provided token count if available, otherwise estimate
+        int currentTokens = tokenService.getConversationTokens();
+        if (currentTokens <= 0) {
+            // Fallback to estimation if no API data available yet
+            currentTokens = estimateTotalContextTokens();
+        }
         
-        if (historyTokens > ModConfig.get().maxHistoryTokens && isSummarizing.compareAndSet(false, true)) {
-            LOGGER.info("Starting summarization. History tokens: {}, threshold: {}", 
-                    historyTokens, ModConfig.get().maxHistoryTokens);
+        int threshold = ModConfig.get().getSummarizationThreshold();
+        
+        if (currentTokens >= threshold && isSummarizing.compareAndSet(false, true)) {
+            LOGGER.info("Starting summarization. Current tokens: {}, threshold: {} ({}% of available context)",
+                    currentTokens, threshold, (int)(ModConfig.get().summarizationThreshold * 100));
             
             // Get a copy of history to avoid holding lock during async operation
             List<ChutesClient.ChatMessage> historyCopy = getHistoryCopy();
@@ -140,9 +161,11 @@ public class ConversationManager {
                     if (history.size() > 5) {
                         history = new ArrayList<>(history.subList(history.size() - 5, history.size()));
                     }
+                    // Reset token count after summarization
+                    tokenService.reset();
                     save();
                     isSummarizing.set(false);
-                    LOGGER.info("Summarization complete. New summary length: {} chars", 
+                    LOGGER.info("Summarization complete. New summary length: {} chars",
                             newSummary != null ? newSummary.length() : 0);
                 }
             }).exceptionally(e -> {
@@ -205,5 +228,20 @@ public class ConversationManager {
      */
     public boolean isSummarizing() {
         return isSummarizing.get();
+    }
+    
+    /**
+     * Returns the current token count from the last API response.
+     * Returns 0 if no API data is available yet.
+     */
+    public int getCurrentTokenCount() {
+        return tokenService.getConversationTokens();
+    }
+    
+    /**
+     * Returns a formatted string with token statistics for debugging.
+     */
+    public String getTokenStats() {
+        return tokenService.getTokenStats();
     }
 }

@@ -46,9 +46,24 @@ public class ModConfig {
     public String koboldCppModel = "kcpp";
     public boolean koboldCppUseChatCompletions = true;
 
+    // Context window settings (0 = auto-detect from API)
+    public int chutesModelContextWindow = 0;  // Auto-detect on first request (DeepSeek-V3 default: 128000)
+    public int openRouterModelContextWindow = 0;  // Auto-detect from /api/v1/models
+    public int koboldCppContextWindow = 0;  // Auto-detect from server or use conservative default
+    
+    // Flags to track if user has manually set context windows (for auto-detection override)
+    public boolean chutesContextWindowUserSet = false;
+    public boolean openRouterContextWindowUserSet = false;
+    public boolean koboldCppContextWindowUserSet = false;
+
+    // Token counting and summarization settings
+    public int maxGenerationTokens = 1024;  // Reserved for response generation
+    public double summarizationThreshold = 0.75;  // Trigger at 75% of available context
+    public int safetyBufferPercent = 10;  // 10% safety buffer by default
+
     // Common settings
     public String customName = "Girlfriend";
-    public int maxHistoryTokens = 8192;
+    public int maxHistoryTokens = 8192;  // Legacy - kept for backward compatibility
     public double minP = 0.05;
     public double temperature = 0.85;
     public boolean enableAI = true;
@@ -112,6 +127,85 @@ public class ModConfig {
             case OPENROUTER -> openRouterModelName;
             case KOBOLDCPP -> koboldCppModel;
         };
+    }
+
+    /**
+     * Gets the active context window size for the current provider.
+     * Returns auto-detected defaults if not user-set.
+     *
+     * @return The context window size in tokens
+     */
+    public int getActiveContextWindow() {
+        return switch (aiProvider) {
+            case CHUTES -> chutesModelContextWindow > 0 ? chutesModelContextWindow : 128000;  // DeepSeek-V3 default
+            case OPENROUTER -> openRouterModelContextWindow > 0 ? openRouterModelContextWindow : 131072;  // Grok default
+            case KOBOLDCPP -> koboldCppContextWindow > 0 ? koboldCppContextWindow : 4096;  // Conservative default for local
+        };
+    }
+
+    /**
+     * Checks if the context window was manually set by the user for the current provider.
+     * Used to determine whether auto-detection should update the value.
+     *
+     * @return true if the user manually set the context window
+     */
+    public boolean isContextWindowUserSet() {
+        return switch (aiProvider) {
+            case CHUTES -> chutesContextWindowUserSet;
+            case OPENROUTER -> openRouterContextWindowUserSet;
+            case KOBOLDCPP -> koboldCppContextWindowUserSet;
+        };
+    }
+
+    /**
+     * Sets the context window for the current provider if not user-set.
+     * This is called by auto-detection logic.
+     *
+     * @param contextWindow The detected context window size
+     */
+    public void setDetectedContextWindow(int contextWindow) {
+        if (contextWindow <= 0) return;
+        
+        switch (aiProvider) {
+            case CHUTES -> {
+                if (!chutesContextWindowUserSet) {
+                    chutesModelContextWindow = contextWindow;
+                }
+            }
+            case OPENROUTER -> {
+                if (!openRouterContextWindowUserSet) {
+                    openRouterModelContextWindow = contextWindow;
+                }
+            }
+            case KOBOLDCPP -> {
+                if (!koboldCppContextWindowUserSet) {
+                    koboldCppContextWindow = contextWindow;
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets the effective available context for conversation history.
+     * This accounts for generation tokens and safety buffer.
+     *
+     * @return The number of tokens available for conversation history
+     */
+    public int getEffectiveAvailableContext() {
+        int contextWindow = getActiveContextWindow();
+        int generationTokens = maxGenerationTokens;
+        int safetyBuffer = (int)(contextWindow * (safetyBufferPercent / 100.0));
+        
+        return contextWindow - generationTokens - safetyBuffer;
+    }
+
+    /**
+     * Gets the token count threshold at which summarization should trigger.
+     *
+     * @return The summarization threshold in tokens
+     */
+    public int getSummarizationThreshold() {
+        return (int)(getEffectiveAvailableContext() * summarizationThreshold);
     }
 
     // Legacy field for migration (no longer used directly)

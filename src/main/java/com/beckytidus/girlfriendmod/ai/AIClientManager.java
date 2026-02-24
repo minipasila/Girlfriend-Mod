@@ -47,6 +47,39 @@ public class AIClientManager {
     }
 
     /**
+     * Generates a response with token usage information using the configured AI provider.
+     * Use this method when accurate token counting is needed.
+     */
+    public static CompletableFuture<AIResponse> generateResponseWithTokens(List<ChutesClient.ChatMessage> history, String systemContext, String playerName) {
+        ModConfig config = ModConfig.get();
+        String name = config.customName.isEmpty() ? "girlfriend" : config.customName.toLowerCase();
+        String prompt = SystemPromptManager.loadSystemPrompt(name, playerName);
+
+        switch (config.aiProvider) {
+            case OPENROUTER:
+                List<OpenRouterClient.ChatMessage> orMessages = new java.util.ArrayList<>();
+                for (ChutesClient.ChatMessage msg : history) {
+                    orMessages.add(new OpenRouterClient.ChatMessage(msg.role, msg.content));
+                }
+                return OpenRouterClient.generateRawWithContextWithTokens(orMessages, prompt, systemContext)
+                        .thenApply(response -> new AIResponse(ResponseCleaner.cleanResponse(response.content), response.tokenUsage));
+
+            case KOBOLDCPP:
+                List<KoboldCppClient.ChatMessage> kcMessages = new java.util.ArrayList<>();
+                for (ChutesClient.ChatMessage msg : history) {
+                    kcMessages.add(new KoboldCppClient.ChatMessage(msg.role, msg.content));
+                }
+                return KoboldCppClient.generateRawWithContextWithTokens(kcMessages, prompt, systemContext)
+                        .thenApply(response -> new AIResponse(ResponseCleaner.cleanResponse(response.content), response.tokenUsage));
+
+            case CHUTES:
+            default:
+                return ChutesClient.generateRawWithContextWithTokens(history, prompt, systemContext)
+                        .thenApply(response -> new AIResponse(ResponseCleaner.cleanResponse(response.content), response.tokenUsage));
+        }
+    }
+
+    /**
      * Generates a response using the configured AI provider with a raw system prompt.
      * Used for internal logic checks.
      */

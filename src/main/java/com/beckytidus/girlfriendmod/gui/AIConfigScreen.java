@@ -42,6 +42,10 @@ public class AIConfigScreen extends Screen {
     private TextFieldWidget minPField;
     private TextFieldWidget tempField;
     private TextFieldWidget texturePathField;
+    private TextFieldWidget contextWindowField;
+    private TextFieldWidget summarizationThresholdField;
+    private TextFieldWidget safetyBufferField;
+    private TextFieldWidget maxGenTokensField;
     private ButtonWidget providerButton;
     private ButtonWidget apiFormatButton;
 
@@ -131,7 +135,19 @@ public class AIConfigScreen extends Screen {
         addLabelAndField(centerX, "Max History Tokens:", String.valueOf(config.maxHistoryTokens), w -> tokenField = w, null);
         addLabelAndField(centerX, "Skin Texture Path:", config.customTexturePath, w -> texturePathField = w, null);
 
-        // 6. Action Buttons
+        // 6. Token Counting Settings (Advanced)
+        addRow(createLabel(centerX, "--- Token Counting Settings ---"));
+        
+        addLabelAndField(centerX, "Context Window (0=auto):",
+            String.valueOf(config.getActiveContextWindow()), w -> contextWindowField = w, null);
+        addLabelAndField(centerX, "Summarization Threshold (0.0-1.0):",
+            String.valueOf(config.summarizationThreshold), w -> summarizationThresholdField = w, null);
+        addLabelAndField(centerX, "Safety Buffer %:",
+            String.valueOf(config.safetyBufferPercent), w -> safetyBufferField = w, null);
+        addLabelAndField(centerX, "Max Generation Tokens:",
+            String.valueOf(config.maxGenerationTokens), w -> maxGenTokensField = w, null);
+
+        // 7. Action Buttons
         addRow(ButtonWidget.builder(Text.literal("Edit System Prompt"), b -> openSystemPromptFile())
                 .dimensions(centerX - 100, 0, 200, 20).build());
 
@@ -380,6 +396,46 @@ public class AIConfigScreen extends Screen {
 
         try {
             config.temperature = Double.parseDouble(tempField.getText());
+        } catch (NumberFormatException ignored) {}
+
+        // Token counting settings
+        try {
+            int contextWindow = Integer.parseInt(contextWindowField.getText());
+            // Set context window for the current provider
+            switch (config.aiProvider) {
+                case CHUTES -> {
+                    config.chutesModelContextWindow = contextWindow;
+                    config.chutesContextWindowUserSet = contextWindow > 0;
+                }
+                case OPENROUTER -> {
+                    config.openRouterModelContextWindow = contextWindow;
+                    config.openRouterContextWindowUserSet = contextWindow > 0;
+                }
+                case KOBOLDCPP -> {
+                    config.koboldCppContextWindow = contextWindow;
+                    config.koboldCppContextWindowUserSet = contextWindow > 0;
+                }
+            }
+        } catch (NumberFormatException ignored) {}
+
+        try {
+            config.summarizationThreshold = Double.parseDouble(summarizationThresholdField.getText());
+            // Clamp to valid range
+            if (config.summarizationThreshold < 0.1) config.summarizationThreshold = 0.1;
+            if (config.summarizationThreshold > 1.0) config.summarizationThreshold = 1.0;
+        } catch (NumberFormatException ignored) {}
+
+        try {
+            config.safetyBufferPercent = Integer.parseInt(safetyBufferField.getText());
+            // Clamp to valid range
+            if (config.safetyBufferPercent < 0) config.safetyBufferPercent = 0;
+            if (config.safetyBufferPercent > 50) config.safetyBufferPercent = 50;
+        } catch (NumberFormatException ignored) {}
+
+        try {
+            config.maxGenerationTokens = Integer.parseInt(maxGenTokensField.getText());
+            // Minimum 256 tokens for generation
+            if (config.maxGenerationTokens < 256) config.maxGenerationTokens = 256;
         } catch (NumberFormatException ignored) {}
 
         ModConfig.save();
