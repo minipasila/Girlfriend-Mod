@@ -14,26 +14,21 @@
 
 ## 📖 About This Mod
 
-This is a fork and expansion of the original [Girlfriend Mod](https://github.com/UltimateGamerMC/Girlfriend-Mod) by UltimateGamerMC, with the following additions and modifications:
+This is a fork and expansion of the original [Girlfriend Mod](https://github.com/UltimateGamerMC/Girlfriend-Mod) by UltimateGamerMC, with the following additions and significant modifications.
 
 ### ✨ New Features (minipasila's Additions - GPLv2 Licensed)
 
-- **🤖 AI-Powered Conversations** - Contextual dialogue using Chutes AI, OpenRouter, or KoboldCpp
-- **🎒 Inventory & Scavenging** - She picks up items, holds your gear, and gives it back when asked
-- **🧠 Intelligent Interaction** - Ask "Do you have any food?" and she will check her inventory and share
-- **🔄 Multiple AI Provider Support** - Choose between Cloud (Chutes/OpenRouter) or Local (KoboldCpp)
-- **💬 Relationship Memory System** - Your girlfriend remembers your conversations
-- **⚙️ Configurable AI Settings** - Temperature, model selection, custom prompts
-- **🎨 Customizable System Prompts** - Edit personality via config file
-- **🎭 Custom Skins** - Resource pack support for custom girlfriend textures
-- **⚔️ Combat Partner** - Auto-equips weapons and fights by your side
-- **💀 Knockout System** - Falls unconscious at 0 HP, respawns after 20 seconds
-- **👁️ Mob Awareness** - Reacts to nearby hostile and neutral mobs
-- **🔄 Response Cleaning** - Removes AI artifacts and formatting tags
-- **⏸️ Pause Menu Integration** - Access AI settings directly from game menu
-- **❤️ Relationship Bonuses** - Better combat, healing, and protection at higher relationship levels
-- **⚔️ Player Kill Reactions** - Comments when you defeat enemies
-- **💊 Auto-Heal Owner** - Uses golden apples to heal you when relationship is high enough
+- **🤖 AI-Powered Conversations** - Contextual dialogue using Chutes AI, OpenRouter, or KoboldCpp (Local).
+- **🧠 Deep Awareness** - She reacts to nearby mobs, biomes, specific blocks (ores, flowers, housing), and decorations (paintings, armor stands).
+- **🎒 Inventory & Scavenging** - 36-slot inventory, auto-pickup, auto-eat, and intelligent item management.
+- **🔄 Multiple AI Providers** - Switch easily between Cloud (Chutes/OpenRouter) or Local (KoboldCpp) for privacy.
+- **💬 Relationship Memory** - Persistent conversation history with automatic summarization to manage context.
+- **⚙️ In-Game Configuration** - Access settings via the Pause Menu or a keybind (G).
+- **🎨 Customizable Appearance** - Resource pack support for custom skins using the Alex model.
+- **⚔️ Combat Partner** - Auto-equips weapons (swords/bows), defends you, and reacts to combat events.
+- **💀 Knockout System** - Falls unconscious at 0 HP instead of dying, respawning nearby after 20 seconds.
+- **❤️ Dynamic Relationship** - A 0-100 relationship level that affects combat damage, healing efficiency, damage reduction, and behavior.
+- **💬 Sentiment Analysis** - Understands compliments vs. insults and adjusts relationship accordingly.
 
 ### ❤️ Original Features (CC0 Licensed - UltimateGamerMC)
 
@@ -46,20 +41,16 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 ## 🎯 What Makes This Special
 
 ### Your Perfect Companion
-- **Always There For You** - She follows you everywhere, stays by your side
-- **Growing Relationship** - Build a real bond through care and conversation
-- **Heartfelt Messages** - Receive genuine affection with romantic phrases
-- **She Remembers You** - AI memory persists across sessions
-- **Intelligent Conversations** - She understands context and responds naturally
+- **Always There For You** - She follows you everywhere, staying by your side.
+- **Growing Bond** - Build a real connection through care, gifts, and conversation.
+- **She Remembers** - AI memory persists across sessions, keeping track of your shared history.
+- **Intelligent Conversations** - She understands context, time of day, and her surroundings.
 
 ### Living, Breathing Connection
-- **Feed & Care** - Share meals to strengthen your bond
-- **Protective Love** - She defends you from hostile mobs
-- **Helpful Scavenger** - She picks up dropped items so you don't miss them
-- **Smart Inventory** - Give her items to hold, or ask for them back via chat
-- **Custom Identity** - Name her whatever you want
-- **Custom Appearance** - Use resource packs for custom skins
-- **Knockout & Respawn** - She can be knocked out and will respawn nearby
+- **Feed & Care** - Share meals to strengthen your bond and heal her.
+- **Protective Love** - She defends you from hostile mobs and will take damage for you at high relationship levels.
+- **Helpful Scavenger** - She picks up dropped items and manages her own inventory.
+- **Smart Inventory** - Ask her for items via chat (e.g., "Do you have any food?") and she will check and share.
 
 ### AI-Powered Conversations
 - **Dynamic Responses** - Context-aware dialogue using Chutes AI, OpenRouter, or KoboldCpp
@@ -73,11 +64,11 @@ This is a fork and expansion of the original [Girlfriend Mod](https://github.com
 
 ### Installation
 
-1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.9
-2. Install [Fabric API](https://modrinth.com/mod/fabric-api) 0.134.0+1.21.9
-3. Download the latest `girlfriend-mod-X.X.X.jar` from [Releases](../../releases)
-4. Place the JAR in your `mods/` folder
-5. Launch Minecraft with the Fabric profile
+1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.9.
+2. Install [Fabric API](https://modrinth.com/mod/fabric-api) 0.134.0+1.21.9.
+3. Download the latest `girlfriend-mod-2.0.X.jar` from [Releases](https://github.com/minipasila/Girlfriend-Mod/releases).
+4. Place the JAR in your `mods/` folder.
+5. Launch Minecraft.
 
 ### Quick Start
 
@@ -100,13 +91,13 @@ Pattern:
 ### AI Configuration
 
 **Method 1: Pause Menu (Recommended)**
-1. Press `ESC` to open the pause menu
-2. Click "Girlfriend AI Settings"
-3. Configure your preferred AI provider and settings
-4. Click "Save & Exit"
+1. Press `ESC` to open the pause menu.
+2. Click "Girlfriend AI Settings".
+3. Configure your preferred AI provider and settings.
+4. Click "Save & Exit".
 
 **Method 2: Keybind**
-Press `G` to open the AI configuration screen
+Press `G` to open the AI configuration screen.
 
 **Method 3: Manual Config**
 Edit `girlfriend-mod.json` in your config folder:
@@ -124,7 +115,9 @@ Edit `girlfriend-mod.json` in your config folder:
   "customName": "YourGirlfriendsName",
   "temperature": 0.85,
   "minP": 0.05,
-  "maxHistoryTokens": 8192,
+  "maxGenerationTokens": 1024,
+  "summarizationThreshold": 0.75,
+  "safetyBufferPercent": 10,
   "enableAI": true,
   "customTexturePath": "girlfriend-mod:textures/entity/girlfriend.png"
 }
@@ -168,14 +161,14 @@ Edit `girlfriend-mod.json` in your config folder:
 | Feed | Right-click with food |
 | Give Item | Right-click with item (non-food) |
 | Toggle Follow/Wait | Sneak + Right-click |
-| Open AI Config | Press `G` or use Pause Menu |
+| Open AI Config | Press `G` or Pause Menu |
 | Talk | Type in chat |
 
 ### Chat Interaction
 Simply type in chat to talk to her!
 - **Chat:** "How are you doing?"
 - **Request Items:** "Can I have that diamond?" or "Give me some food"
-- **General:** "What do you think about this place?"
+- **Context:** She reacts to the time of day, nearby blocks, and mobs.
 
 ## 💬 Commands
 
@@ -233,60 +226,6 @@ You can also use external texture paths:
 - `minecraft:textures/entity/steve.png` (use Steve's skin)
 - `custom-mod:textures/entity/my_skin.png` (custom namespace)
 
-## 📁 File Structure
-
-```
-girlfriend-mod/
-├── src/main/java/com/beckytidus/girlfriendmod/
-│   ├── GirlfriendMod.java           # Main mod class
-│   ├── GirlfriendModClient.java     # Client initialization
-│   ├── ai/
-│   │   ├── AIClientManager.java     # Unified AI client router
-│   │   ├── ChutesClient.java        # Chutes AI API integration
-│   │   ├── OpenRouterClient.java    # OpenRouter API integration
-│   │   ├── KoboldCppClient.java     # KoboldCpp API integration
-│   │   ├── ConversationManager.java # Memory system
-│   │   ├── RelationshipManager.java # Relationship logic and sentiment analysis
-│   │   └── ResponseCleaner.java     # AI response cleaning utility
-│   ├── entity/
-│   │   └── GirlFriendEntity.java    # Core entity
-│   ├── registry/
-│   │   ├── EntityRegistry.java      # Entity registration
-│   │   └── ItemRegistry.java        # Item registration
-│   ├── item/
-│   │   └── GirlFriendSummonerItem.java
-│   ├── command/
-│   │   └── GirlFriendCommand.java
-│   ├── interaction/
-│   │   ├── EntityInteractionHandler.java
-│   │   └── ItemUseHandler.java
-│   ├── event/
-│   │   ├── ChatEventHandler.java    # Chat message handler
-│   │   └── EntityAttributeHandler.java
-│   ├── gui/
-│   │   └── AIConfigScreen.java      # Config GUI with provider selection
-│   ├── config/
-│   │   └── ModConfig.java           # Config with AI provider support
-│   ├── network/
-│   │   └── ModNetwork.java          # Sync config/memory
-│   └── client/
-│       ├── KeyInputHandler.java     # Keybind handler (optional)
-│       ├── PauseMenuIntegration.java # Pause menu integration
-│       └── render/
-│           └── GirlFriendEntityRenderer.java  # Custom skin rendering
-└── src/main/resources/
-    ├── fabric.mod.json
-    ├── girlfriend-mod.mixins.json
-    ├── assets/girlfriend-mod/
-    │   ├── lang/en_us.json
-    │   ├── textures/
-    │   │   └── entity/
-    │   │       └── girlfriend.png   # Default skin
-    │   └── system-prompt.txt        # AI personality
-    └── data/girlfriend-mod/recipes/
-        └── girlfriend_summoner.json
-```
-
 ## 🔧 Configuration Files
 
 | File | Purpose |
@@ -342,6 +281,6 @@ This is a work of fiction. The Girlfriend Mod is a fictional companion entity fo
 
 **Made with ❤️ by minipasila**
 
-[GitHub](https://github.com/minipasila/Girlfriend-Mod) • [Issues](../../issues) • [Discussions](../../discussions)
+[GitHub](https://github.com/minipasila/Girlfriend-Mod) • [Issues](https://github.com/minipasila/Girlfriend-Mod/issues) • [Discussions](https://github.com/minipasila/Girlfriend-Mod/discussions)
 
 </div>
