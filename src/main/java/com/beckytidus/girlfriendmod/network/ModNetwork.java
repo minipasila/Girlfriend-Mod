@@ -24,7 +24,6 @@ public class ModNetwork {
         String koboldCppModel,
         boolean koboldCppUseChatCompletions,
         String name,
-        int tokens,
         double minP,
         double temperature,
         String aiProvider
@@ -60,7 +59,6 @@ public class ModNetwork {
         buf.writeString(p.koboldCppModel());
         buf.writeBoolean(p.koboldCppUseChatCompletions());
         buf.writeString(p.name());
-        buf.writeInt(p.tokens());
         buf.writeDouble(p.minP());
         buf.writeDouble(p.temperature());
         buf.writeString(p.aiProvider());
@@ -76,7 +74,6 @@ public class ModNetwork {
             buf.readString(),
             buf.readBoolean(),
             buf.readString(),
-            buf.readInt(),
             buf.readDouble(),
             buf.readDouble(),
             buf.readString()
@@ -100,7 +97,6 @@ public class ModNetwork {
                 config.koboldCppModel = payload.koboldCppModel();
                 config.koboldCppUseChatCompletions = payload.koboldCppUseChatCompletions();
                 config.customName = payload.name();
-                config.maxHistoryTokens = payload.tokens();
                 config.minP = payload.minP();
                 config.temperature = payload.temperature();
 
@@ -154,7 +150,6 @@ public class ModNetwork {
             config.koboldCppModel,
             config.koboldCppUseChatCompletions,
             config.customName,
-            config.maxHistoryTokens,
             config.minP,
             config.temperature,
             config.aiProvider.name()

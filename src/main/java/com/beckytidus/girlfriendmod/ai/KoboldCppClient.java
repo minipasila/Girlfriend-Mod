@@ -285,7 +285,7 @@ public class KoboldCppClient {
         JsonObject body = new JsonObject();
         body.addProperty("prompt", prompt);
         body.addProperty("max_length", 200);
-        body.addProperty("max_context_length", config.maxHistoryTokens);
+        body.addProperty("max_context_length", config.getActiveContextWindow());
         body.addProperty("temperature", config.temperature);
         body.addProperty("min_p", config.minP);
         

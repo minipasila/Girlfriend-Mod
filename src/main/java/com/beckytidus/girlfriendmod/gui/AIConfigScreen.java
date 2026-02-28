@@ -38,7 +38,6 @@ public class AIConfigScreen extends Screen {
     private TextFieldWidget koboldCppUrlField;
     private TextFieldWidget koboldCppModelField;
     private TextFieldWidget nameField;
-    private TextFieldWidget tokenField;
     private TextFieldWidget minPField;
     private TextFieldWidget tempField;
     private TextFieldWidget texturePathField;
@@ -132,7 +131,6 @@ public class AIConfigScreen extends Screen {
         this.addDrawableChild(tempField);
         this.addDrawableChild(minPField);
 
-        addLabelAndField(centerX, "Max History Tokens:", String.valueOf(config.maxHistoryTokens), w -> tokenField = w, null);
         addLabelAndField(centerX, "Skin Texture Path:", config.customTexturePath, w -> texturePathField = w, null);
 
         // 6. Token Counting Settings (Advanced)
@@ -385,10 +383,6 @@ public class AIConfigScreen extends Screen {
         config.koboldCppModel = koboldCppModelField.getText();
         config.customName = nameField.getText();
         config.customTexturePath = texturePathField.getText();
-
-        try {
-            config.maxHistoryTokens = Integer.parseInt(tokenField.getText());
-        } catch (NumberFormatException ignored) {}
 
         try {
             config.minP = Double.parseDouble(minPField.getText());

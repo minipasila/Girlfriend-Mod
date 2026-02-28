@@ -63,7 +63,6 @@ public class ModConfig {
 
     // Common settings
     public String customName = "Girlfriend";
-    public int maxHistoryTokens = 8192;  // Legacy - kept for backward compatibility
     public double minP = 0.05;
     public double temperature = 0.85;
     public boolean enableAI = true;
